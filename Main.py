@@ -2,6 +2,7 @@ from DataM import DataM
 from BackTest import BackTest
 import re
 import os
+import time
 from LogFiles import log
 import pickle
 
@@ -17,7 +18,7 @@ class Main:
         # logmsg.write('Best ' + algo_name + ': %f using %s' % (1, 5))
 
         if True:
-            if False:
+            if True:
                 Data = DataM()
                 Data.Loading()
                 Data.ClearData(creatCSV=True)
@@ -26,7 +27,6 @@ class Main:
                     pickle.dump(Data, output, pickle.HIGHEST_PROTOCOL)
             else:
                 Data = pickle.load(open(os.path.abspath("").replace("Program_ML\\Code", "") + 'Raw_Data.pkl', 'rb'))
-
             Data.Derivation(creatCSV=True)
         else:
             Data = DataM(Load=True)
@@ -38,9 +38,9 @@ class Main:
 
         # list_model = ['Neuronal', 'XGBRegressor', 'RandForestReg']
         list_model = ['XGBRegressor', 'RandForestReg']
-        fut = ["Bund1", "EURUSD_Fut1", "TNote_10_Fut1", "TBond_30_Fut1"]
-        deriv = ["Raw_Return", "Raw_Normalized_Return"]
-        hor = [5, 10, 22]
+        fut = ["Bund1", "Stoxx50_Fut1"]
+        deriv = ["Raw_Return", "Raw_PositiveReturn"]
+        hor = [1, 7, 30]
 
         list_bt, h = Data.listBT(fut=fut, deriv=deriv, horizon=hor)
         # list_bt, h = Data.listBT(fut=fut, horizon=hor, deriv=deriv)

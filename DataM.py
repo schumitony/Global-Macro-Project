@@ -41,25 +41,11 @@ class DataM:
 
             self.ParametreDeDerivation = DataFrame
         else:
-            A = pickle.load(open('Data.pkl', 'rb'))
+            A = pickle.load(open(os.path.abspath("").replace("Program_ML\\Code", "Data.pkl"), 'rb'))
 
-            self.Univers = A.Univers
-            self.RawData = A.RawData
-            self.Data = A.Data
-
-            self.X = A.X
-            self.Y = A.Y
-
-            self.X_Out = A.X_Out
-            self.Y_Out = A.Y_Out
-
-            self.X_BT = A.X_BT
-            self.Y_BT = A.Y_BT
-
-            self.ListDataFrame0 = A.ListDataFrame0
-            self.ListFuture = A.ListFuture
-            self.Future_Price = A.Future_Price
-            self.ParametreDeDerivation = A.ParametreDeDerivation
+            # Permet de ballayer les champs de l'object A et de les copier dans ceux de self qui sont les mêmes
+            for k in A.__dict__.keys():
+                setattr(self, k, getattr(A, k))
 
     def copy(self):
         return copy.copy(self)
@@ -113,21 +99,12 @@ class DataM:
                         'Groupe1'])
             else:
 
-                NewVariable = Serie.derivation(row['Operation'], H, P, List_E1, List_E2)
+                NewVariable = Serie.derivation(row['Operation'], row['KeepAtEnd'], H, P, List_E1, List_E2)
 
-                # Transformation des listes imbriquées en une liste simple de Series
-                while isinstance(NewVariable[0], list) is True:
-                    NewVariable = list(reduce(lambda y, x: y + x, filter(lambda x: isinstance(x, list) is True, NewVariable)))
-
-                # Modification de le l'attribu to_keep et du nom de la colonne
-                for v in NewVariable:
-                    v.to_keep = row['KeepAtEnd']
-                    v.S.columns = [v.Nom]
-
-                if row['Operation'] in ['Multiplication']:
+                if row['Operation'] in ['Multiplication', ''] \
+                        or (isinstance(row['Operation'], float) and isnan(row['Operation'])):
                     for v in List_E1:
                         self.ListDataFrame0.remove(v)
-
 
                 self.ListDataFrame0 = self.ListDataFrame0 + NewVariable
 
@@ -136,6 +113,9 @@ class DataM:
         for v in self.ListDataFrame0:
             if v.S.shape[1] > 1:
                 print("Le nombre de colonne de la serie " + v.Nom + " est supérieur à 1!!!")
+
+
+        print("Temps de calcul total des dérivations : " + str(sum(elapseT)))
 
         # Filtration du prix des futures
         self.ListFuture = list(filter(lambda x: x.to_keep == 2, self.ListDataFrame0))
@@ -404,7 +384,7 @@ class DataM:
             for h in horizon:
                 for d in deriv:
 
-                    xk = [x for x in self.ListDataFrame0 if x.Level1 == "Y"]
+                    xk = list(filter(lambda x: x.Level1 == "Y", self.ListDataFrame0))
 
                     if f is not None:
                         xk = [x for x in xk if re.search(f, x.Nom) is not None]
@@ -417,22 +397,7 @@ class DataM:
 
                     xo = xo + [(x.Nom, x.h) for x in xk]
 
-                    # if f is None and h is None:
-                    #     xo = xo + [(x.Nom, x.h) for x in self.ListDataFrame0 if x.Level1 == "Y" and x.DerivationName == d]
-                    # elif f is not None and h is None:
-                    #     xo = xo + [(x.Nom, x.h) for x in self.ListDataFrame0 if x.Level1 == "Y" and x.DerivationName == d
-                    #                and re.search(f, x.Nom) is not None]
-                    # elif f is None and h is not None:
-                    #     xo = xo + [(x.Nom, x.h) for x in self.ListDataFrame0 if x.Level1 == "Y" and x.DerivationName == d
-                    #                and x.h == h]
-                    # elif f is not None and h is not None:
-                    #     xo = xo + [(x.Nom, x.h) for x in self.ListDataFrame0 if x.Level1 == "Y" and x.DerivationName == d
-                    #                and re.search(f, x.Nom) is not None and x.h == h]
-
         y, h = zip(*xo)
-
-        # y = [x.Nom for x in self.ListDataFrame0 if x.Level1 == "Y"]
-        # h = [x.h for x in self.ListDataFrame0 if x.Level1 == "Y"]
 
         l = list()
         for y0 in self.ListFuture:

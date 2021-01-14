@@ -50,6 +50,16 @@ class Serie:
 
         self.Nom = files_name.replace(path, '').replace('.csv', '')
 
+        # Referencement de la serie
+        self.Level1 = Univers[Univers['Nom'] == self.Nom]['Level1'].values[0]
+        self.Level2 = Univers[Univers['Nom'] == self.Nom]['Level2'].values[0]
+        self.Level3 = Univers[Univers['Nom'] == self.Nom]['Level3'].values[0]
+        self.Level4 = Univers[Univers['Nom'] == self.Nom]['Level4'].values[0]
+        self.Maturity = Univers[Univers['Nom'] == self.Nom]['Maturity'].values[0]
+        self.Pays = Univers[Univers['Nom'] == self.Nom]['Pays'].values[0]
+        self.Lag = Univers[Univers['Nom'] == self.Nom]['Lag'].values[0]
+        self.DerivationLevel = 0
+
         self.S = read_csv(files_name, sep=",")
         self.S.index = to_datetime(self.S['Date'], format='%Y-%m-%d')
         self.S = self.S.drop(['Date'], axis=1)
@@ -58,7 +68,8 @@ class Serie:
         #     self.to_keep = 2
 
         if "Return" in self.Nom:
-            # self.Nom = self.Nom.replace('_Return', '')
+            self.Level4 = "Last"
+            self.Nom = self.Nom.replace('_Return', '')
 
             # to_keep = 2 pour garder le prix des futures en fin de traitement!
             # self.to_keep = 2
@@ -82,20 +93,9 @@ class Serie:
             # Cummule des returns quotidiens pour calculer un prix fictif
             self.S = self.S.cumprod(axis=0)
 
-
         self.DerivationName = "Raw"
 
-        self.S.columns = [files_name.replace(path, '').replace('.csv', '')]
-
-        # Referencement de la serie
-        self.Level1 = Univers[Univers['Nom'] == self.Nom]['Level1'].values[0]
-        self.Level2 = Univers[Univers['Nom'] == self.Nom]['Level2'].values[0]
-        self.Level3 = Univers[Univers['Nom'] == self.Nom]['Level3'].values[0]
-        self.Level4 = Univers[Univers['Nom'] == self.Nom]['Level4'].values[0]
-        self.Maturity = Univers[Univers['Nom'] == self.Nom]['Maturity'].values[0]
-        self.Pays = Univers[Univers['Nom'] == self.Nom]['Pays'].values[0]
-        self.Lag = Univers[Univers['Nom'] == self.Nom]['Lag'].values[0]
-        self.DerivationLevel = 0
+        self.S.columns = [self.Nom]
 
         # Frequence de la serie
         self.Freqence = (self.S.index[1:] - self.S.index[0:-1]).days.astype(float).values.mean()
@@ -105,37 +105,49 @@ class Serie:
             self.S = self.S.shift(self.Lag)
 
     @staticmethod
-    def derivation(TypeDerivation, ListH=None, ListP=None, ListeS1=None, ListeS2=None):
+    def derivation(TypeDerivation, Keep, ListH=None, ListP=None, ListeS1=None, ListeS2=None):
         listNewE = list()
 
         # if ListeS2 != [None]:
         #     List_E12 = list()
         #     [List_E12.append((x, y)) for x in ListeS1 for y in ListeS2 if x.Nom != y.Nom and (y, x) not in List_E12]
 
-        for p in ListP:
-            if isinstance(p, list):
-                p = list(map(lambda x: float(x) if x.replace('.', '', 1).isdigit() else x,  p))
+        if (isinstance(TypeDerivation, str) and TypeDerivation!= "") \
+                or (isinstance(TypeDerivation, float) and not isnan(TypeDerivation)):
+            for p in ListP:
+                if isinstance(p, list):
+                    p = list(map(lambda x: float(x) if x.replace('.', '', 1).isdigit() else x,  p))
 
-                zipList = zip([p[k] for k in range(0, len(p)-1, 2)], [p[k] for k in range(1, len(p), 2)])
-                p = dict(zipList)
+                    zipList = zip([p[k] for k in range(0, len(p)-1, 2)], [p[k] for k in range(1, len(p), 2)])
+                    p = dict(zipList)
 
-            if ListeS2 != [None]:
-                for h in ListH:
-                    h = h if ListH != [None] else None
-                    # listNewE.append(list(map(lambda x: getattr(x, TypeDerivation)(h, p, ListeS2), ListeS1)))
-                    for el in ListeS1:
-                        ListeS2 = list(filter(lambda x: x.Nom != el.Nom, ListeS2))
-                        listNewE.append(getattr(el, TypeDerivation)(h, p, ListeS2))
+                if ListeS2 != [None]:
+                    for h in ListH:
+                        h = h if ListH != [None] else None
+                        # listNewE.append(list(map(lambda x: getattr(x, TypeDerivation)(h, p, ListeS2), ListeS1)))
+                        for el in ListeS1:
+                            ListeS2 = list(filter(lambda x: x.Nom != el.Nom, ListeS2))
+                            listNewE.append(getattr(el, TypeDerivation)(h, p, ListeS2))
 
+                elif TypeDerivation in ['EcartMedGroupe']:
+                    for h in ListH:
+                        listNewE.append(getattr(Serie, TypeDerivation)(ListeS1, h, p))
 
-            elif TypeDerivation in ['EcartMedGroupe']:
-                for h in ListH:
-                    listNewE.append(getattr(Serie, TypeDerivation)(ListeS1, h, p))
+                else:
+                    for h in ListH:
+                        h = h if ListH != [None] else None
+                        listNewE.append(list(map(lambda x: getattr(x, TypeDerivation)(h, p), ListeS1)))
 
-            else:
-                for h in ListH:
-                    h = h if ListH != [None] else None
-                    listNewE.append(list(map(lambda x: getattr(x, TypeDerivation)(h, p), ListeS1)))
+            # Transformation des listes imbriquées en une liste simple de Series
+            while isinstance(listNewE[0], list) is True:
+                listNewE = list(reduce(lambda y, x: y + x, filter(lambda x: isinstance(x, list) is True, listNewE)))
+        else:
+            listNewE = ListeS1
+
+        # Modification de le l'attribu to_keep et du nom de la colonne
+        for v in listNewE:
+            v.to_keep = Keep
+            v.S.columns = [v.Nom]
 
         return listNewE
 
@@ -400,8 +412,8 @@ class Serie:
         Pmin.Level4 = "PerfFromMin"
 
         # La ligne ci dessous calcul l'ArgMax sur la fenetre glissante de taille H. Si le resulat est H, le max se trouve sur cette ligne
-        elapseT = list()
-        t0 = time.perf_counter()
+        # elapseT = list()
+        # t0 = time.perf_counter()
 
         i = 0
 
@@ -447,7 +459,7 @@ class Serie:
         Pmax.S = pd.DataFrame(PerfFromMax, index=self.S.index, columns=['PerfToMax'])
         Pmin.S = pd.DataFrame(PerfFromMin, index=self.S.index, columns=['PerfToMin'])
 
-        elapseT.append(time.perf_counter() - t0)
+        # elapseT.append(time.perf_counter() - t0)
         # t0 = time.perf_counter()
         #
         # ArgMax = (self.S.rolling(h).apply(lambda x: np.argmax(x)) - (h - 1)).values[:, 0]
@@ -481,7 +493,6 @@ class Serie:
 
         return [Qmax, Qmin, Pmax, Pmin]
 
-
     def Zscore(self, h0, p=None, Q1=None):
         h = ceil(h0 / self.Freqence)
         Q = self.CopyCar(h0)
@@ -505,11 +516,12 @@ class Serie:
 
     def PositiveReturn(self, h0, p=None, Q1=None):
         h = ceil(h0 / self.Freqence)
-        Q = self.CopyCar(h)
+        Q = self.CopyCar(h0)
 
-        Q.Nom = 'Return_' + str(h) +'d_' + Q.Nom
+        Q.Nom = 'PositiveReturn' + str(h0) +'d_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_PositiveReturn"
         Q.DerivationLevel = Q.DerivationLevel + 1
+        Q.Level1 = "Y"
         Q.Level4 = "PositiveReturn"
 
         # Q.S = DataFrame(self.S.values[h:] / self.S.values[0:-h] - 1, index=self.S.index[h:], columns=['Valeur'])
@@ -534,11 +546,12 @@ class Serie:
 
     def Return(self, h0, p=None, Q1=None):
         h = ceil(h0 / self.Freqence)
-        Q = self.CopyCar(h)
+        Q = self.CopyCar(h0)
 
-        Q.Nom = 'Return_' + str(h) +'d_' + Q.Nom
+        Q.Nom = 'Return_' + str(h0) +'d_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_Return"
         Q.DerivationLevel = Q.DerivationLevel + 1
+        Q.Level1 = "Y"
         Q.Level4 = "Return"
 
         # Q.S = DataFrame(self.S.values[h:] / self.S.values[0:-h] - 1, index=self.S.index[h:], columns=['Valeur'])
@@ -553,13 +566,13 @@ class Serie:
         rt0 = np.divide(self.S, self.S.shift(h)) - 1
         Sigma = rt0.rolling(90).std()
 
-
         h = ceil(h0 / self.Freqence)
-        Q = self.CopyCar(h)
+        Q = self.CopyCar(h0)
 
-        Q.Nom = 'Normalized_Return_' + str(h) +'d_' + Q.Nom
+        Q.Nom = 'Normalized_Return_' + str(h0) +'d_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_Normalized_Return"
         Q.DerivationLevel = Q.DerivationLevel + 1
+        Q.Level1 = "Y"
         Q.Level4 = "NormalizedReturn"
 
         Q.S = np.divide(np.divide(self.S.shift(-h), self.S).applymap(lambda x: x-1), Sigma)
@@ -630,6 +643,7 @@ class Serie:
         Q.Nom = 'Xtime_' + str(p) +'x_SigmaHebdo_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_Xtime"
         Q.DerivationLevel = Q.DerivationLevel + 1
+        Q.Level1 = "Y"
         Q.Level4 = "Xtime"
 
         Q.S = pd.DataFrame(nbj, index=df.index)
