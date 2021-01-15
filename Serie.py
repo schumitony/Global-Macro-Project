@@ -112,7 +112,7 @@ class Serie:
         #     List_E12 = list()
         #     [List_E12.append((x, y)) for x in ListeS1 for y in ListeS2 if x.Nom != y.Nom and (y, x) not in List_E12]
 
-        if (isinstance(TypeDerivation, str) and TypeDerivation!= "") \
+        if (isinstance(TypeDerivation, str) and TypeDerivation != "") \
                 or (isinstance(TypeDerivation, float) and not isnan(TypeDerivation)):
             for p in ListP:
                 if isinstance(p, list):

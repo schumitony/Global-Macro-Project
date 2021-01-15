@@ -23,7 +23,7 @@ class BackTest:
                  pred_files="Predictions_Save"):
 
         self.DataM = DataM.copy()
-        self.mypath = os.path.abspath("").replace("\\Code", "\\" + mypath + "\\" + strategie + "--maxp_"
+        self.mypath = os.path.abspath("").replace("Program_ML\\Code", mypath + "\\" + strategie + "--maxp_"
                                                   + str(max_weight*100).replace('.0', '') + '--' + refit + '--' + cv + '\\')
         self.mypath = self.mypath + y + '\\'
 
@@ -52,6 +52,9 @@ class BackTest:
 
         load_mode = True
 
+        hh = list(filter(lambda x: x.Nom == self.y, self.DataM.ListDataFrame0))[0]
+        np.isnan(hh.S)
+
         dt00 = dt.datetime.strptime('2005/12/31', '%Y/%m/%d')
         Bt_Duration = 3
 
@@ -63,7 +66,7 @@ class BackTest:
             #     load_mode = (True if dt0 < dt.datetime.strptime(load_date, '%Y/%m/%d') else False)
 
             self.DataM.Decoupage(AbsoluteStart=dt00, EndTest=dt0, Bt_Duration=Bt_Duration, TypeDecoupage='Overlap')
-            self.Price = self.DataM.Future_Price.loc[:, self.Price_name]
+            self.Price = self.DataM.Data_Price.loc[:, self.Price_name]
 
             centrage = None if self.h == 0 else 'Glisse'
 

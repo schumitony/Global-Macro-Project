@@ -36,8 +36,8 @@ class DataM:
             self.Y_BT = DataFrame
 
             self.ListDataFrame0 = list()
-            self.ListFuture = list()
-            self.Future_Price = DataFrame
+            self.ListPrix = list()
+            self.Data_Price = DataFrame
 
             self.ParametreDeDerivation = DataFrame
         else:
@@ -60,7 +60,10 @@ class DataM:
 
             MasterD = glob.glob(path + 'Master_Derivation.csv')
             if MasterD is not []:
-                DerivP.append(read_csv(MasterD[0], sep=","))
+                if len(MasterD) != 0:
+                    DerivP.append(read_csv(MasterD[0], sep=","))
+                else:
+                    print("Le fichier de dérivation Master n'existe pas!!")
 
             for files_name in glob.glob(path + 'Derivation_*.csv'):
                 DerivP.append(read_csv(files_name, sep=","))
@@ -118,9 +121,9 @@ class DataM:
         print("Temps de calcul total des dérivations : " + str(sum(elapseT)))
 
         # Filtration du prix des futures
-        self.ListFuture = list(filter(lambda x: x.to_keep == 2, self.ListDataFrame0))
-        self.Future_Price = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
-                                   list(map(lambda x: x.S, self.ListFuture)))
+        self.ListPrix = list(filter(lambda x: x.to_keep == 2, self.ListDataFrame0))
+        self.Data_Price = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
+                                 list(map(lambda x: x.S, self.ListPrix)))
 
         # Filtration de la liste sur les series que l'on veut conserver
         self.ListDataFrame0 = list(filter(lambda x: x.to_keep == 1, self.ListDataFrame0))
@@ -183,8 +186,8 @@ class DataM:
         self.Y_BT = self.Data.loc[kk, Col]
 
         # Restriction des prix pour le backtest
-        kk = AbsoluteStart < self.Future_Price.index
-        self.Future_Price = self.Future_Price.loc[kk, :]
+        kk = AbsoluteStart < self.Data_Price.index
+        self.Data_Price = self.Data_Price.loc[kk, :]
 
     def ExtractList(self, row, RowName):
 
@@ -375,40 +378,63 @@ class DataM:
 
         return DaysC
 
-    def listBT(self, fut=[None], horizon=[None], deriv=[None]):
-        # Liste des Y
+    def listBT(self, path=os.path.abspath("").replace("\\Code", "\\Parametrage\\")):
 
-        # On peut filtrer la liste des futures avec la variable fut
+        STR = read_csv(path + 'Strategie.csv', sep=",")
+
+        st = []
+        for index, row in STR.iterrows():
+
+            col = list(row.index)[1:]
+
+            if row[0] == 1:
+                st0 = ""
+                for c in col:
+                    st0 = st0 + ":" if st0 != "" else st0
+                    st0 = st0 + c + "=" + row.loc[c, ]
+
+                st0 = [st0]
+                #Dupplication des défintions selon les "ou /" imbriqué
+                while len(list(filter(lambda x: x is not None,
+                                      map(lambda x: re.search('\([_a-zA-Z0-9/]+\)', x), st0), ))) > 0:
+                    for cond in st0:
+                        # detection des conditions "ou" entre parentaises
+                        orp = re.findall('\([_a-zA-Z0-9/]+\)', cond)
+                        if len(orp) > 0:
+                            st0.remove(cond)
+                            C = orp[0]
+                            Ck = re.sub('\(|\)', '', C).split('/')
+                            for k in Ck:
+                                st0.append(re.sub('\(' + C + '\)', k, cond))
+                            break
+
+                st = st + list(map(lambda x: re.split(':|=', x), st0))
+
         xo = []
-        for f in fut:
-            for h in horizon:
-                for d in deriv:
+        for p in st:
+            p = list(map(lambda x: float(x) if x.replace('.', '', 1).isdigit() else x, p))
 
-                    xk = list(filter(lambda x: x.Level1 == "Y", self.ListDataFrame0))
+            zipList = zip([p[k] for k in range(0, len(p) - 1, 2)], [p[k] for k in range(1, len(p), 2)])
+            p = dict(zipList)
 
-                    if f is not None:
-                        xk = [x for x in xk if re.search(f, x.Nom) is not None]
+            # Varaible à prevoir
+            xk = list(filter(lambda x: x.Level1 == "Y", self.ListDataFrame0))
 
-                    if h is not None:
-                        xk = [x for x in xk if x.h == h]
+            if p['Inst'] is not None:
+                xk = [x for x in xk if re.search(p['Inst'], x.Nom) is not None]
 
-                    if d is not None:
-                        xk = [x for x in xk if x.DerivationName == d]
+            if p['Horizon'] is not None:
+                xk = [x for x in xk if x.h == p['Horizon']]
 
-                    xo = xo + [(x.Nom, x.h) for x in xk]
+            if p['Y'] is not None:
+                xk = [x for x in xk if x.DerivationName == p['Y']]
 
-        y, h = zip(*xo)
+            #Prix de la variable à prévoir
+            if p['Inst'] is not None:
+                xp = [x for x in self.ListPrix if re.search(p['Inst'], x.Nom) is not None]
 
-        l = list()
-        for y0 in self.ListFuture:
-
-            # Liste des futurs
-            r = re.compile(".*" + y0.Nom)
-            y_list = list(filter(r.match, y))
-
-            for y00 in y_list:
-                l.append((y00, y0.Nom))
-        return l, h
+            xo = xo + [{'Yname': x.Nom, 'h': x.h, 'Algo': [p['Algo']], 'PrixInst': xp[0].Nom } for x in xk]
+        return xo
 
     def SelectData(self, Selected_Col):
         DataM0 = copy.copy(self)
@@ -420,17 +446,16 @@ class DataM:
 
         return DataM0
 
-    def All_bt(self, list_bt, h, cv, strategie, refit, list_model, max_weight):
-        for y0, h0 in zip(list_bt, h):
+    def All_bt(self, strategies, cv, strategie, refit, max_weight):
+        for s in strategies:
             BT = BackTest(DataM=self,
-                          y=y0[0],
-                          price_name=y0[1],
+                          y=s['Yname'],
+                          price_name=s['PrixInst'],
                           strategie=strategie,
-                          list_model=list_model,
+                          list_model=s['Algo'],
                           refit=refit,
-                          h=h0,
+                          h=s['h'],
                           cv=cv,
                           mypath='res',
                           max_weight=max_weight)
-
             BT.estime_bt()

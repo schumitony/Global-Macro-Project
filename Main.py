@@ -17,8 +17,8 @@ class Main:
         # algo_name = "ee"
         # logmsg.write('Best ' + algo_name + ': %f using %s' % (1, 5))
 
-        if True:
-            if True:
+        if False:
+            if False:
                 Data = DataM()
                 Data.Loading()
                 Data.ClearData(creatCSV=True)
@@ -37,34 +37,31 @@ class Main:
         # hor = [5]
 
         # list_model = ['Neuronal', 'XGBRegressor', 'RandForestReg']
-        list_model = ['XGBRegressor', 'RandForestReg']
-        fut = ["Bund1", "Stoxx50_Fut1"]
-        deriv = ["Raw_Return", "Raw_PositiveReturn"]
-        hor = [1, 7, 30]
+        # list_model = ['XGBRegressor', 'RandForestReg']
+        # fut = ["Bund1", "Stoxx50_Fut1"]
+        # deriv = ["Raw_Return", "Raw_PositiveReturn"]
+        # hor = [1, 7, 30]
 
-        list_bt, h = Data.listBT(fut=fut, deriv=deriv, horizon=hor)
-        # list_bt, h = Data.listBT(fut=fut, horizon=hor, deriv=deriv)
-        # list_bt, h = Data.listBT("Bund1")
-
-        Data.All_bt(list_bt, h, 'blend_test_cv', 'weight_ls_param_rescaling', 'score_ada', list_model, 0.25)
-        Data.All_bt(list_bt, h, 'time_cv', 'weight_ls_param_rescaling', 'score_ada', list_model, 0.25)
-        Data.All_bt(list_bt, h, 'blend_cv', 'weight_ls_param_rescaling', 'score_ada', list_model, 0.25)
+        Stra = Data.listBT()
+        Data.All_bt(Stra, 'blend_test_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)
+        Data.All_bt(Stra, 'time_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)
+        Data.All_bt(Stra, 'blend_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)
         
-        Data.All_bt(list_bt, h, 'blend_test_cv', 'weight_ls_param_rescaling', 'neg_mean_squared_error', list_model, 0.25)
-        Data.All_bt(list_bt, h, 'time_cv', 'weight_ls_param_rescaling', 'neg_mean_squared_error', list_model, 0.25)
-        Data.All_bt(list_bt, h, 'blend_cv', 'weight_ls_param_rescaling', 'neg_mean_squared_error', list_model, 0.25)
+        Data.All_bt(Stra, 'blend_test_cv', 'weight_ls_param_rescaling', 'neg_mean_squared_error', 0.25)
+        Data.All_bt(Stra, 'time_cv', 'weight_ls_param_rescaling', 'neg_mean_squared_error', 0.25)
+        Data.All_bt(Stra, 'blend_cv', 'weight_ls_param_rescaling', 'neg_mean_squared_error', 0.25)
 
-        Data.All_bt(list_bt, h, 'blend_test_cv', 'weight_ls', 'score_ada', list_model, 0.25)
-        Data.All_bt(list_bt, h, 'time_cv', 'weight_ls', 'score_ada', list_model, 0.25)
-        Data.All_bt(list_bt, h, 'blend_cv', 'weight_ls', 'score_ada', list_model, 0.25)
+        Data.All_bt(Stra, 'blend_test_cv', 'weight_ls', 'score_ada', 0.25)
+        Data.All_bt(Stra, 'time_cv', 'weight_ls', 'score_ada', 0.25)
+        Data.All_bt(Stra, 'blend_cv', 'weight_ls', 'score_ada', 0.25)
 
-        Data.All_bt(list_bt, h, 'blend_test_cv', 'weight_ls', 'neg_mean_squared_error', list_model, 0.25)
-        Data.All_bt(list_bt, h, 'time_cv', 'weight_ls', 'neg_mean_squared_error', list_model, 0.25)
-        Data.All_bt(list_bt, h, 'blend_cv', 'weight_ls', 'neg_mean_squared_error', list_model, 0.25)
+        Data.All_bt(Stra, 'blend_test_cv', 'weight_ls', 'neg_mean_squared_error', 0.25)
+        Data.All_bt(Stra, 'time_cv', 'weight_ls', 'neg_mean_squared_error', 0.25)
+        Data.All_bt(Stra, 'blend_cv', 'weight_ls', 'neg_mean_squared_error', 0.25)
 
         # Poids Max 100 pct
-        # Data.All_bt(list_bt, h, 'time_cv', 'weight_ls', 'score_ada', 1)
-        # Data.All_bt(list_bt, h, 'blend_cv', 'weight_ls', 'score_ada', 1)
+        # Data.All_bt(Stra, 'time_cv', 'weight_ls', 'score_ada', 1)
+        # Data.All_bt(Stra, 'blend_cv', 'weight_ls', 'score_ada', 1)
 
-        # Data.All_bt(list_bt, h, 'time_cv', 'weight_ls', 'neg_mean_squared_error', 1)
-        # Data.All_bt(list_bt, h, 'blend_cv', 'weight_ls', 'neg_mean_squared_error', 1)
+        # Data.All_bt(Stra, 'time_cv', 'weight_ls', 'neg_mean_squared_error', 1)
+        # Data.All_bt(Stra, 'blend_cv', 'weight_ls', 'neg_mean_squared_error', 1)
