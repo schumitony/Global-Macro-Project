@@ -133,7 +133,7 @@ class BackTest:
         Y = list(filter(lambda x: x.Nom == self.y, self.DataM.ListDataFrame0))[0].S
         i = np.where(np.isnan(Y) == False)
 
-        dt00 = Y.index[i[0][0]]
+        dt00 = Y.index[i[0][0]] + relativedelta(years=1)
         # dt00 = dt.datetime.strptime('2005/12/31', '%Y/%m/%d')
 
         y_pred = dict()

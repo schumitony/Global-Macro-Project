@@ -42,22 +42,29 @@ class Main:
         # deriv = ["Raw_Return", "Raw_PositiveReturn"]
         # hor = [1, 7, 30]
 
-        Stra = Data.listBT_II()
-        Data.All_bt(Stra, 'blend_test_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)
-        Data.All_bt(Stra, 'time_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)
-        Data.All_bt(Stra, 'blend_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)
-        
-        Data.All_bt(Stra, 'blend_test_cv', 'weight_ls_param_rescaling', 'neg_mean_squared_error', 0.25)
-        Data.All_bt(Stra, 'time_cv', 'weight_ls_param_rescaling', 'neg_mean_squared_error', 0.25)
-        Data.All_bt(Stra, 'blend_cv', 'weight_ls_param_rescaling', 'neg_mean_squared_error', 0.25)
+        Group_stra = Data.listBT_II()
+        for nom, s in Group_stra.items():
+            Data.All_bt(s)
 
-        Data.All_bt(Stra, 'blend_test_cv', 'weight_ls', 'score_ada', 0.25)
-        Data.All_bt(Stra, 'time_cv', 'weight_ls', 'score_ada', 0.25)
-        Data.All_bt(Stra, 'blend_cv', 'weight_ls', 'score_ada', 0.25)
 
-        Data.All_bt(Stra, 'blend_test_cv', 'weight_ls', 'neg_mean_squared_error', 0.25)
-        Data.All_bt(Stra, 'time_cv', 'weight_ls', 'neg_mean_squared_error', 0.25)
-        Data.All_bt(Stra, 'blend_cv', 'weight_ls', 'neg_mean_squared_error', 0.25)
+        # Data.All_bt(Stra, 'blend_test_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)
+        # Data.All_bt(Stra, 'time_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)
+        # Data.All_bt(Stra, 'blend_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)
+        #
+        # Data.All_bt(Stra, 'blend_test_cv', 'weight_ls_param_rescaling', 'neg_mean_squared_error', 0.25)
+        # Data.All_bt(Stra, 'time_cv', 'weight_ls_param_rescaling', 'neg_mean_squared_error', 0.25)
+        # Data.All_bt(Stra, 'blend_cv', 'weight_ls_param_rescaling', 'neg_mean_squared_error', 0.25)
+        #
+        # Data.All_bt(Stra, 'blend_test_cv', 'weight_ls', 'score_ada', 0.25)
+        # Data.All_bt(Stra, 'time_cv', 'weight_ls', 'score_ada', 0.25)
+        # Data.All_bt(Stra, 'blend_cv', 'weight_ls', 'score_ada', 0.25)
+        #
+        # Data.All_bt(Stra, 'blend_test_cv', 'weight_ls', 'neg_mean_squared_error', 0.25)
+        # Data.All_bt(Stra, 'time_cv', 'weight_ls', 'neg_mean_squared_error', 0.25)
+        # Data.All_bt(Stra, 'blend_cv', 'weight_ls', 'neg_mean_squared_error', 0.25)
+
+
+
 
         # Poids Max 100 pct
         # Data.All_bt(Stra, 'time_cv', 'weight_ls', 'score_ada', 1)

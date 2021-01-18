@@ -515,16 +515,16 @@ class DataM:
 
         return DataM0
 
-    def All_bt(self, strategies, cv, strategie, refit, max_weight):
+    def All_bt(self, strategies):
         for s in strategies:
             BT = BackTest(DataM=self,
                           y=s['Yname'],
                           price_name=s['PrixInst'],
-                          strategie=strategie,
+                          strategie=s['strategie'],
                           list_model=s['Algo'],
-                          refit=refit,
+                          refit=s['refit'],
                           h=s['h'],
-                          cv=cv,
+                          cv=s['cv'],
                           mypath='res',
-                          max_weight=max_weight)
+                          max_weight=s['max_weight'])
             BT.estime_bt()

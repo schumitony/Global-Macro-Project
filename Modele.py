@@ -43,7 +43,7 @@ class Modele:
         if centrage == 'Global':
             self.DataM.Y = self.DataM.Y.apply(lambda x: x - x.mean())
         elif centrage == 'Glisse':
-            self.DataM.Y = self.DataM.Y.apply(lambda x: x - x.rolling(window=self.DataM.Y.shape[0], min_periods=260).mean())
+            self.DataM.Y = self.DataM.Y.apply(lambda x: x - x.rolling(window=self.DataM.Y.shape[0], min_periods=np.min([260, len(self.DataM.Y)])).mean())
 
         # Lag Prediction ( Correspond à l'horizon du return predit : il faut exclure la periode h de l'apprentissage)
         x = list(filter(lambda x: x.Nom == y, self.DataM.ListDataFrame0))[0]
