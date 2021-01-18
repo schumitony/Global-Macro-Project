@@ -378,6 +378,7 @@ class DataM:
 
         return DaysC
 
+
     def listBT(self, path=os.path.abspath("").replace("\\Code", "\\Parametrage\\")):
 
         STR = read_csv(path + 'Strategie.csv', sep=",")
@@ -435,6 +436,74 @@ class DataM:
 
             xo = xo + [{'Yname': x.Nom, 'h': x.h, 'Algo': [p['Algo']], 'PrixInst': xp[0].Nom } for x in xk]
         return xo
+
+
+
+
+    def listBT_II(self, path=os.path.abspath("").replace("\\Code", "\\Parametrage\\")):
+
+        STR = read_csv(path + 'Strategie_II.csv', sep=",")
+
+        st = []
+        for index, row in STR.iterrows():
+            col = list(row.index)
+            st0 = ""
+            for c in col:
+                st0 = st0 + ":" if st0 != "" else st0
+
+                if isinstance(row.loc[c, ], str):
+                    st0 = st0 + c + "=" + row.loc[c, ]
+                else:
+                    st0 = st0 + c + "=" + str(row.loc[c,])
+
+            st0 = [st0]
+            #Dupplication des défintions selon les "ou /" imbriqué
+            while len(list(filter(lambda x: x is not None,
+                                  map(lambda x: re.search('\([_a-zA-Z0-9/]+\)', x), st0), ))) > 0:
+                for cond in st0:
+                    # detection des conditions "ou" entre parentaises
+                    orp = re.findall('\([_a-zA-Z0-9/]+\)', cond)
+                    if len(orp) > 0:
+                        st0.remove(cond)
+                        C = orp[0]
+                        Ck = re.sub('\(|\)', '', C).split('/')
+                        for k in Ck:
+                            st0.append(re.sub('\(' + C + '\)', k, cond))
+                        break
+
+            st = st + list(map(lambda x: re.split(':|=', x), st0))
+
+        Group = dict()
+        for p in st:
+            p = list(map(lambda x: float(x) if x.replace('.', '', 1).isdigit() else x, p))
+
+            zipList = zip([p[k] for k in range(0, len(p) - 1, 2)], [p[k] for k in range(1, len(p), 2)])
+            p = dict(zipList)
+
+            if p['Groupe'] not in list(Group.keys()):
+                Group[p['Groupe']] = []
+
+            # Varaible à prevoir
+            xk = list(filter(lambda x: x.Level1 == "Y", self.ListDataFrame0))
+
+            if p['Inst'] is not None:
+                xk = [x for x in xk if re.search(p['Inst'], x.Nom) is not None]
+
+            if p['Horizon'] is not None:
+                xk = [x for x in xk if x.h == p['Horizon']]
+
+            if p['Y'] is not None:
+                xk = [x for x in xk if x.DerivationName == p['Y']]
+
+            #Prix de la variable à prévoir
+            if p['Inst'] is not None:
+                xp = [x for x in self.ListPrix if re.search(p['Inst'], x.Nom) is not None]
+
+            Group[p['Groupe']] = Group[p['Groupe']] + \
+                                 [{'Yname': x.Nom, 'h': x.h, 'PrixInst': xp[0].Nom,
+                                 'Algo': p['Algo'], 'cv': p['cv'], 'strategie': p['strategie'],
+                                 'refit': p['refit'], 'max_weight': p['max_weight']} for x in xk]
+        return Group
 
     def SelectData(self, Selected_Col):
         DataM0 = copy.copy(self)

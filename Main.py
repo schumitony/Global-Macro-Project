@@ -42,7 +42,7 @@ class Main:
         # deriv = ["Raw_Return", "Raw_PositiveReturn"]
         # hor = [1, 7, 30]
 
-        Stra = Data.listBT()
+        Stra = Data.listBT_II()
         Data.All_bt(Stra, 'blend_test_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)
         Data.All_bt(Stra, 'time_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)
         Data.All_bt(Stra, 'blend_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)

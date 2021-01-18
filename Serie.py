@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from functools import reduce
 import time
 
+
 class Serie:
     def __init__(self):
         self.S = DataFrame
@@ -88,7 +89,8 @@ class Serie:
 
             # Ajout d'une ligne avec 100!
             d = to_datetime(self.S.index[0] + pd.DateOffset(days=-1))
-            self.S = pd.concat([pd.DataFrame(data=[100], index=pd.date_range(start=d, end=d), columns=self.S.columns), self.S], axis=0)
+            self.S = pd.concat(
+                [pd.DataFrame(data=[100], index=pd.date_range(start=d, end=d), columns=self.S.columns), self.S], axis=0)
 
             # Cummule des returns quotidiens pour calculer un prix fictif
             self.S = self.S.cumprod(axis=0)
@@ -116,9 +118,9 @@ class Serie:
                 or (isinstance(TypeDerivation, float) and not isnan(TypeDerivation)):
             for p in ListP:
                 if isinstance(p, list):
-                    p = list(map(lambda x: float(x) if x.replace('.', '', 1).isdigit() else x,  p))
+                    p = list(map(lambda x: float(x) if x.replace('.', '', 1).isdigit() else x, p))
 
-                    zipList = zip([p[k] for k in range(0, len(p)-1, 2)], [p[k] for k in range(1, len(p), 2)])
+                    zipList = zip([p[k] for k in range(0, len(p) - 1, 2)], [p[k] for k in range(1, len(p), 2)])
                     p = dict(zipList)
 
                 if ListeS2 != [None]:
@@ -160,8 +162,9 @@ class Serie:
         Q.DerivationLevel = Q.DerivationLevel + 1
 
         # Q.S.drop(Q.S.index, inplace=True)
-        Q.S = DataFrame(self.S.values[h:] - self.S.values[0:-h], index=self.S.index[h:], columns=['Valeur'])
-        Q.S.columns = self.S.columns
+        # Q.S = DataFrame(self.S.values[h:] - self.S.values[0:-h], index=self.S.index[h:], columns=['Valeur'])
+        # Q.S.columns = self.S.columns
+        Q.S = np.subtract(self.S, self.S.shift(h))
 
         return Q
 
@@ -173,8 +176,9 @@ class Serie:
         Q.DerivationName = Q.DerivationName + "_Diff"
         Q.DerivationLevel = Q.DerivationLevel + 1
 
-        Q.S = DataFrame(self.S.values[h:] / self.S.values[0:-h] - 1, index=self.S.index[h:], columns=['Valeur'])
-        Q.S.columns = self.S.columns
+        Q.S = np.divide(self.S, self.S.shift(h)).apply(lambda x: x - 1)
+        # Q.S = DataFrame(self.S.values[h:] / self.S.values[0:-h] - 1, index=self.S.index[h:], columns=['Valeur'])
+        # Q.S.columns = self.S.columns
 
         return Q
 
@@ -202,20 +206,20 @@ class Serie:
 
         # Ecart des quantiles 0.95 et 0.05
         Q = self.CopyCar(h0)
-        Q.Nom = 'Quantile_0.05_Vs_0.95_' + str(h0) +'d_' + Q.Nom
+        Q.Nom = 'Quantile_0.05_Vs_0.95_' + str(h0) + 'd_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_Quantile"
         Q.DerivationLevel = Q.DerivationLevel + 1
 
-        Q.S = (A+B+C+D)
+        Q.S = (A + B + C + D)
         Lq.append(Q)
 
         # Ratio des quantiles 0.95 et 0.05
         Q = self.CopyCar(h0)
-        Q.Nom = 'Ratio_Quantile_0.05_Vs_0.95_' + str(h0) +'d_' + Q.Nom
+        Q.Nom = 'Ratio_Quantile_0.05_Vs_0.95_' + str(h0) + 'd_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_Quantile"
         Q.DerivationLevel = Q.DerivationLevel + 1
 
-        Q.S = (A+B).divide(C+D)
+        Q.S = (A + B).divide(C + D)
         Lq.append(Q)
 
         return Lq
@@ -232,7 +236,6 @@ class Serie:
             if 'p_level4' in KeyList:
                 ListeS = list(filter(lambda x: x.Level4 == p['p_level4'], ListeS))
 
-
         AllSeries = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
                            list(map(lambda x: x.S, ListeS)))
 
@@ -241,7 +244,6 @@ class Serie:
 
         ListE = list()
         for Sf in ListeS:
-
             S = Sf.CopyCar()
             S.Nom = 'EcartMedGroupe_' + S.Nom
             S.DerivationName = S.DerivationName + "_EcartMedGroupe"
@@ -251,29 +253,11 @@ class Serie:
 
         return ListE
 
-
-    def EcartQuantile_Old(self, h0, p=None, Q1=None):
-        h = ceil(h0 / self.Freqence)
-        Q = self.CopyCar(h0)
-
-        Q.Nom = 'Quantile_' + str(p[0]) + '_Vs_' + str(p[1]) + '_' + str(h0) +'d_' + Q.Nom
-        Q.DerivationName = Q.DerivationName + "_Quantile"
-        Q.DerivationLevel = Q.DerivationLevel + 1
-
-        # Calcul des quantiles souhaité en décalant les résultats d'un jour (exclusion du dernier jour)
-        Q1 = self.S.rolling(h).quantile(p[0])
-        Q2 = self.S.rolling(h).quantile(p[1])
-
-        Q.S = Q2.sub(Q1).to_frame()
-
-        return Q
-
-
     def Autocorrelation(self, h0, p=None, Q1=None):
         h = ceil(h0 / self.Freqence)
         Q = self.CopyCar(h0)
 
-        Q.Nom = 'AutoCorrel_' + str(h0) +'d_' + Q.Nom
+        Q.Nom = 'AutoCorrel_' + str(h0) + 'd_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_AutoCorrel"
         Q.DerivationLevel = Q.DerivationLevel + 1
 
@@ -283,21 +267,19 @@ class Serie:
 
         return Q
 
-
     def Volatilite(self, h0, p=None, Q1=None):
         h = ceil(h0 / self.Freqence)
         Q = self.CopyCar(h0)
 
-        Q.Nom = 'Vol_' + str(h0) +'d_' + Q.Nom
+        Q.Nom = 'Vol_' + str(h0) + 'd_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_Vol"
         Q.DerivationLevel = Q.DerivationLevel + 1
 
         # Calcul des volatilité souhaité en decalant les resultats d'un jour (exclusion du dernier jour)
         # Q.S = self.S.rolling(h).std().shift(1)
-        Q.S = self.S.rolling(h).std().apply(lambda x: x*np.sqrt(365/self.h))
+        Q.S = self.S.rolling(h).std().apply(lambda x: x * np.sqrt(365 / self.h))
 
         return Q
-
 
     def Correlation(self, h0, p=None, Q1=None):
         h = ceil(h0 / self.Freqence)
@@ -314,7 +296,6 @@ class Serie:
         Q.S = Qk.iloc[:, 0].rolling(h).corr(Qk.iloc[:, 1]).to_frame()
 
         return Q
-
 
     def Spread(self, h0=None, p=None, ListeS=None):
 
@@ -349,7 +330,6 @@ class Serie:
                 else:
                     S.Nom = 'Spread_' + self.Nom + '_Vs_' + S.Nom
 
-
                 if S.Pays != self.Pays:
                     S.Pays = self.Pays + ' vs ' + S.Pays
 
@@ -372,7 +352,6 @@ class Serie:
                 ListE.append(S)
 
         return ListE
-
 
     def TempsExtrema(self, h0=None, p=None, ListeS=None):
         h = ceil(h0 / self.Freqence)
@@ -497,7 +476,7 @@ class Serie:
         h = ceil(h0 / self.Freqence)
         Q = self.CopyCar(h0)
 
-        Q.Nom = 'Zscore_' + str(h0) +'d_' + Q.Nom
+        Q.Nom = 'Zscore_' + str(h0) + 'd_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_Zscore"
         Q.DerivationLevel = Q.DerivationLevel + 1
 
@@ -513,12 +492,11 @@ class Serie:
 
         return Q
 
-
     def PositiveReturn(self, h0, p=None, Q1=None):
         h = ceil(h0 / self.Freqence)
         Q = self.CopyCar(h0)
 
-        Q.Nom = 'PositiveReturn' + str(h0) +'d_' + Q.Nom
+        Q.Nom = 'PositiveReturn' + str(h0) + 'd_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_PositiveReturn"
         Q.DerivationLevel = Q.DerivationLevel + 1
         Q.Level1 = "Y"
@@ -527,38 +505,76 @@ class Serie:
         # Q.S = DataFrame(self.S.values[h:] / self.S.values[0:-h] - 1, index=self.S.index[h:], columns=['Valeur'])
 
         # Dalage des donnée entre 1 jour et h jour
-        Num = pd.concat([self.S.shift(-h) for h in list(range(1, h+1))], axis=1)
+        Num = pd.concat([self.S.shift(-h) for h in list(range(1, h + 1))], axis=1)
         Denom = pd.concat([self.S for h in list(range(1, h + 1))], axis=1)
 
         # Calcul des perfs sur les horizon compris entre 1 et h
-        Quotient = np.divide(Num, Denom).applymap(lambda x: x-1)
+        Quotient = np.divide(Num, Denom).applymap(lambda x: x - 1)
 
         # Suppréssion des calculs aux dates n'ayant pas les h horizon de comptet!
         ii = np.any(np.isnan(Quotient), axis=1)
 
         # Calcul du nombre de perf positive sur les h perf possibles
-        Q.S = np.sum(Quotient > 0, axis=1).map(lambda x: x/h).to_frame()
+        Q.S = np.sum(Quotient > 0, axis=1).map(lambda x: x / h).to_frame()
 
         Q.S.loc[ii] = np.nan
 
         return Q
 
+    def ReturnClass(self, h0, p=None, Q1=None):
+        h = ceil(h0 / self.Freqence)
+        Q = self.CopyCar(h0)
+
+        Q.Nom = 'ReturnClass_' + str(h0) + 'd_' + Q.Nom
+        Q.DerivationName = Q.DerivationName + "_ReturnClass"
+        Q.DerivationLevel = Q.DerivationLevel + 1
+        Q.Level1 = "Y"
+        Q.Level4 = "ReturnClass"
+
+        ret0 = np.divide(self.S.shift(-h), self.S).applymap(lambda x: x - 1)
+
+        cla = np.empty((len(ret0), 1))
+        cla.fill(np.nan)
+        lis = []
+        hp = ceil(p['p_h'] / self.Freqence)
+
+        for wk in [-1, 1]:
+            if wk == 1:
+                ret = ret0[ret0 > 0]
+                w = 0
+            elif wk == -1:
+                ret = ret0[ret0 <= 0]
+                w = -2
+
+            for k in [0.05, 0.95, 1]:
+                lo = ret.dropna().rolling(pd.offsets.Day(p['p_h'])).quantile(k)
+                A = pd.concat([lo, ret], axis=1).iloc[:, 0].to_frame()
+
+                # lo = ret.rolling(hp).apply(lambda x: x.dropna().quantile(k))
+                cla[np.logical_and(np.array(ret <= A), np.isnan(cla))] = w
+                w += 1
+                lo.columns = ['Q' + str(k)]
+                lis.append(lo)
+
+        cla[0:hp] = np.nan
+        Q.S = pd.DataFrame(cla, index=self.S.index)
+
+        return Q
 
     def Return(self, h0, p=None, Q1=None):
         h = ceil(h0 / self.Freqence)
         Q = self.CopyCar(h0)
 
-        Q.Nom = 'Return_' + str(h0) +'d_' + Q.Nom
+        Q.Nom = 'Return_' + str(h0) + 'd_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_Return"
         Q.DerivationLevel = Q.DerivationLevel + 1
         Q.Level1 = "Y"
         Q.Level4 = "Return"
 
         # Q.S = DataFrame(self.S.values[h:] / self.S.values[0:-h] - 1, index=self.S.index[h:], columns=['Valeur'])
-        Q.S = np.divide(self.S.shift(-h), self.S).applymap(lambda x: x-1)
+        Q.S = np.divide(self.S.shift(-h), self.S).applymap(lambda x: x - 1)
 
         return Q
-
 
     def Normalized_Return(self, h0, p=None, Q1=None):
 
@@ -569,16 +585,15 @@ class Serie:
         h = ceil(h0 / self.Freqence)
         Q = self.CopyCar(h0)
 
-        Q.Nom = 'Normalized_Return_' + str(h0) +'d_' + Q.Nom
+        Q.Nom = 'Normalized_Return_' + str(h0) + 'd_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_Normalized_Return"
         Q.DerivationLevel = Q.DerivationLevel + 1
         Q.Level1 = "Y"
         Q.Level4 = "NormalizedReturn"
 
-        Q.S = np.divide(np.divide(self.S.shift(-h), self.S).applymap(lambda x: x-1), Sigma)
+        Q.S = np.divide(np.divide(self.S.shift(-h), self.S).applymap(lambda x: x - 1), Sigma)
 
         return Q
-
 
     def Xtime(self, h0=None, p=None, Q1=None):
 
@@ -640,7 +655,7 @@ class Serie:
 
         Q = self.CopyCar(0)
 
-        Q.Nom = 'Xtime_' + str(p) +'x_SigmaHebdo_' + Q.Nom
+        Q.Nom = 'Xtime_' + str(p) + 'x_SigmaHebdo_' + Q.Nom
         Q.DerivationName = Q.DerivationName + "_Xtime"
         Q.DerivationLevel = Q.DerivationLevel + 1
         Q.Level1 = "Y"

@@ -52,13 +52,9 @@ class BackTest:
 
         load_mode = True
 
-        hh = list(filter(lambda x: x.Nom == self.y, self.DataM.ListDataFrame0))[0]
-        np.isnan(hh.S)
-
-        dt00 = dt.datetime.strptime('2005/12/31', '%Y/%m/%d')
         Bt_Duration = 3
 
-        y_pred, dt0 = self.check_pred(dt00=dt00, Bt_Duration=Bt_Duration)
+        y_pred, dt0, dt00 = self.check_pred(Bt_Duration=Bt_Duration)
 
         while dt0 <= self.DataM.Data.index[-1]:
 
@@ -130,9 +126,15 @@ class BackTest:
         x = np.multiply(a, return_pred)
         return self.max_weight * (np.exp(x) - 1) / (np.exp(x) + 1)
 
-    def check_pred(self, dt00, Bt_Duration):
+    def check_pred(self, Bt_Duration):
         # Cette fonction renvoie l'historique des prevision si cette derniere on deja été produite, ainsi que la
         # dernière date de mise à jour du modèle
+
+        Y = list(filter(lambda x: x.Nom == self.y, self.DataM.ListDataFrame0))[0].S
+        i = np.where(np.isnan(Y) == False)
+
+        dt00 = Y.index[i[0][0]]
+        # dt00 = dt.datetime.strptime('2005/12/31', '%Y/%m/%d')
 
         y_pred = dict()
 
@@ -160,7 +162,7 @@ class BackTest:
         else:
             dt0 = dt00
 
-        return y_pred, dt0
+        return y_pred, dt0, dt00
 
     def ReadCsv(self, InModel=True):
 
