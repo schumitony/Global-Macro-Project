@@ -502,7 +502,7 @@ class DataM:
             Group[p['Groupe']] = Group[p['Groupe']] + \
                                  [{'Yname': x.Nom, 'h': x.h, 'PrixInst': xp[0].Nom,
                                  'Algo': p['Algo'], 'cv': p['cv'], 'strategie': p['strategie'],
-                                 'refit': p['refit'], 'max_weight': p['max_weight']} for x in xk]
+                                 'refit': p['refit'], 'max_weight': p['max_weight'], 'Centrage': p['Centrage']} for x in xk]
         return Group
 
     def SelectData(self, Selected_Col):
@@ -515,7 +515,7 @@ class DataM:
 
         return DataM0
 
-    def All_bt(self, strategies):
+    def All_bt(self, nom, strategies):
         for s in strategies:
             BT = BackTest(DataM=self,
                           y=s['Yname'],
@@ -526,5 +526,6 @@ class DataM:
                           h=s['h'],
                           cv=s['cv'],
                           mypath='res',
-                          max_weight=s['max_weight'])
+                          max_weight=s['max_weight'],
+                          centrage=s['Centrage'])
             BT.estime_bt()

@@ -12,6 +12,7 @@ import pathlib
 import shutil as sh
 import glob
 import re
+import bisect
 
 #import matplotlib.pyplot as plt
 
@@ -19,7 +20,7 @@ import re
 
 class BackTest:
 
-    def __init__(self, DataM, mypath, y, price_name, strategie, list_model, refit, h, cv, max_weight,
+    def __init__(self, DataM, mypath, y, price_name, strategie, list_model, refit, h, cv, max_weight,centrage,
                  pred_files="Predictions_Save"):
 
         self.DataM = DataM.copy()
@@ -45,6 +46,7 @@ class BackTest:
         self.strategie = strategie
         self.list_model = list_model
         self.refit = refit
+        self.centrage = centrage
 
         self.y_pred = list()
 
@@ -64,7 +66,7 @@ class BackTest:
             self.DataM.Decoupage(AbsoluteStart=dt00, EndTest=dt0, Bt_Duration=Bt_Duration, TypeDecoupage='Overlap')
             self.Price = self.DataM.Data_Price.loc[:, self.Price_name]
 
-            centrage = None if self.h == 0 else 'Glisse'
+            # centrage = None if self.h == 0 else 'Glisse'
 
             M = Modele(DataM=self.DataM,
                        y=self.y,
@@ -76,7 +78,7 @@ class BackTest:
                        subpath=str(dt0.year) + "-" + str(dt0.month) + "\\",
                        save_path='Pickle\\LearnInProgress\\',
                        load_path='Pickle\\LearnCompleted\\',
-                       centrage=centrage
+                       centrage=self.centrage
                        )
 
             M.kfold_strategie()
@@ -133,7 +135,13 @@ class BackTest:
         Y = list(filter(lambda x: x.Nom == self.y, self.DataM.ListDataFrame0))[0].S
         i = np.where(np.isnan(Y) == False)
 
-        dt00 = Y.index[i[0][0]] + relativedelta(years=1)
+        dt00 = Y.index[i[0][0]] + relativedelta(years=2)
+        qbegins = [dt.datetime(dt00.year, month, 1) + relativedelta(days=-1) for month in (1, 4, 7, 10)]\
+                  + [dt.datetime(dt00.year + 1, 1, 1) + relativedelta(days=-1)]
+        idx = bisect.bisect_left(qbegins, dt00)
+
+        dt00 = qbegins[idx]
+
         # dt00 = dt.datetime.strptime('2005/12/31', '%Y/%m/%d')
 
         y_pred = dict()

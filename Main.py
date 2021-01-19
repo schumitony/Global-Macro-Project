@@ -44,7 +44,7 @@ class Main:
 
         Group_stra = Data.listBT_II()
         for nom, s in Group_stra.items():
-            Data.All_bt(s)
+            Data.All_bt(nom, s)
 
 
         # Data.All_bt(Stra, 'blend_test_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)

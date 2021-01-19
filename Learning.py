@@ -51,10 +51,16 @@ class Learnings:
 
         if learns is None:
 
-            for m, refit in zip(list_model, list_refit):
-                self.algo_dict.update({m: Algo(refit=refit, weight_f=weight_f)})
-                self.best_score_cv.update({m: None})
-                self.best_score_out.update({m: None})
+            if isinstance(list_model, list):
+                for m, refit in zip(list_model, list_refit):
+                    self.algo_dict.update({m: Algo(refit=refit, weight_f=weight_f)})
+                    self.best_score_cv.update({m: None})
+                    self.best_score_out.update({m: None})
+            else:
+                self.algo_dict.update({list_model: Algo(refit=list_refit, weight_f=weight_f)})
+                self.best_score_cv.update({list_model: None})
+                self.best_score_out.update({list_model: None})
+
             self.best_model_ever = object
             self.kfold = kfold
             self.DataM = DataM
