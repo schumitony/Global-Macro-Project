@@ -23,6 +23,10 @@ class DataM:
     def __init__(self, Load=False):
         if Load is False:
             self.Univers = DataFrame
+
+            self.Univers_Y = DataFrame
+            self.Univers_X = DataFrame
+
             self.RawData = DataFrame
             self.Data = DataFrame
 
@@ -132,6 +136,15 @@ class DataM:
         self.Data = pd.concat([x.S for x in self.ListDataFrame0], axis=1)
         # self.Data = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
         #                    list(map(lambda x: x.S, self.ListDataFrame0)))
+
+        A = []
+        for x in self.ListDataFrame0:
+            di = x.__dict__
+            di.pop('S', di)
+            A.append(pd.DataFrame(di, index=[di['Nom']]))
+        self.Univers_X = pd.concat(A, axis=0)
+        self.Univers_X = self.Univers_X.drop(['Nom'], axis=1)
+
 
         # Creation du fichier CSV avec toutes les series conservées
         if creatCSV is True:

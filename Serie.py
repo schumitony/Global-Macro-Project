@@ -15,6 +15,8 @@ class Serie:
         self.to_keep = 0
         self.h = 0
         self.sum_h = 0
+        self.idx_h = 0
+        self.sum_idx_h = 0
         self.Nom = ""
         self.DerivationName = ""
         self.Level1 = ""
@@ -23,8 +25,8 @@ class Serie:
         self.Level4 = ""
         self.Pays = ""
         self.Maturity = ""
-        self.Lag = float
-        self.DerivationLevel = float
+        self.Lag = int
+        self.DerivationLevel = int
 
     def CopyCar(self, h=0):
         Q = Serie()
@@ -33,6 +35,9 @@ class Serie:
         Q.sum_h = self.sum_h + h
 
         Q.Freqence = self.Freqence
+
+        Q.idx_h = ceil(h / self.Freqence)
+        Q.sum_idx_h = self.sum_idx_h + Q.idx_h
 
         Q.Nom = self.Nom
         Q.Level1 = self.Level1

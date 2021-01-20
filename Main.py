@@ -18,7 +18,7 @@ class Main:
         # logmsg.write('Best ' + algo_name + ': %f using %s' % (1, 5))
 
         if True:
-            if True:
+            if False:
                 Data = DataM()
                 Data.Loading()
                 Data.ClearData(creatCSV=True)

@@ -50,7 +50,7 @@ class Modele:
         # Lag Prediction ( Correspond à l'horizon du return predit : il faut exclure la periode h de l'apprentissage)
         x = list(filter(lambda x: x.Nom == y, self.DataM.ListDataFrame0))[0]
         #self.Pred_lag = ceil(x.h / x.Freqence)
-        self.Pred_lag = int(x.h)
+        self.Pred_lag = int(x.idx_h)
 
 
         # Selection de la variable Y
@@ -95,10 +95,12 @@ class Modele:
         self.DataM.X_Out = self.DataM.X_Out.loc[:, Col]
         self.DataM.X_BT = self.DataM.X_BT.loc[:, Col]
 
+        self.DataM.ListDataFrame0 = [x for x in self.DataM.ListDataFrame0 if x.Nom in Col]
+
         # On selectionne i tel que le nombre de de série disponible soit au mon de 80%
 
         # Lag maximal
-        self.H_max = ceil(max([(x.sum_h / x.Freqence) for x in self.DataM.ListDataFrame0]))
+        self.H_idx_max = ceil(max([x.idx_h for x in self.DataM.ListDataFrame0]))
 
     def kfold_strategie(self, n_fold=4):
 
@@ -110,7 +112,7 @@ class Modele:
                 testIndices = list(range(i * k + min(i, m), (i + 1) * k + min(i + 1, m)))
 
                 x = list(range(0, max(0, min(nn, i * k + min(i, m) - (self.Pred_lag + 1)))))
-                y = list(range(max(0, (i + 1) * k + min(i + 1, m) + self.H_max + 1), self.DataM.X.index.shape[0]))
+                y = list(range(max(0, (i + 1) * k + min(i + 1, m) + self.H_idx_max + 1), self.DataM.X.index.shape[0]))
                 trainIndices = x + y
 
                 if testIndices.__len__() != 0 and trainIndices.__len__() != 0:
@@ -120,7 +122,7 @@ class Modele:
             for i in range(n_fold-1):
                 trainIndices = list(range(i * k + min(i, m), (i + 2) * k + min(i + 2, m)))
 
-                x = list(range(0, max(0, min(nn, i * k + min(i, m) - (self.H_max + 1)))))
+                x = list(range(0, max(0, min(nn, i * k + min(i, m) - (self.H_idx_max + 1)))))
                 y = list(range(max(0, (i + 2) * k + min(i + 2, m) + self.Pred_lag + 1), self.DataM.X.index.shape[0]))
                 testIndices = x + y
 
