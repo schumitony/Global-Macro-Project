@@ -132,7 +132,8 @@ class BackTest:
         # Cette fonction renvoie l'historique des prevision si cette derniere on deja été produite, ainsi que la
         # dernière date de mise à jour du modèle
 
-        Y = list(filter(lambda x: x.Nom == self.y, self.DataM.ListDataFrame0))[0].S
+        # Y = list(filter(lambda x: x.Nom == self.y, self.DataM.ListY))[0].S
+        Y = self.DataM.Data[self.y]
         i = np.where(np.isnan(Y) == False)
 
         dt00 = Y.index[i[0][0]] + relativedelta(years=2)

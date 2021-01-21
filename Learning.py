@@ -170,7 +170,7 @@ class Learnings:
             if m == 'XGBRegressor':
                 # XGBRegressor
                 scoring = ["neg_mean_absolute_error", "neg_mean_squared_error"]
-                p_grid = {"learning_rate": [0.05, 0.075, 0.1], "max_depth": [5, 20, 100, 200], "n_estimators": [100, 200, 300, 400]}
+                p_grid = {"learning_rate": [0.05, 0.075, 0.1], "max_depth": [5, 20, 100, 200, 400, 800], "n_estimators": [100, 200, 300, 400, 500, 600]}
                 # p_grid = {"learning_rate": [0.1], "max_depth": [5], "n_estimators": [50, 100]}
                 model = XGBRegressor()
 

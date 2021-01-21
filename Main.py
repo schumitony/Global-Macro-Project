@@ -17,7 +17,7 @@ class Main:
         # algo_name = "ee"
         # logmsg.write('Best ' + algo_name + ': %f using %s' % (1, 5))
 
-        if True:
+        if False:
             if False:
                 Data = DataM()
                 Data.Loading()
@@ -45,7 +45,6 @@ class Main:
         Group_stra = Data.listBT_II()
         for nom, s in Group_stra.items():
             Data.All_bt(nom, s)
-
 
         # Data.All_bt(Stra, 'blend_test_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)
         # Data.All_bt(Stra, 'time_cv', 'weight_ls_param_rescaling', 'score_ada', 0.25)

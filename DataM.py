@@ -40,6 +40,9 @@ class DataM:
             self.Y_BT = DataFrame
 
             self.ListDataFrame0 = list()
+            self.ListX = list()
+            self.ListY = list()
+
             self.ListPrix = list()
             self.Data_Price = DataFrame
 
@@ -137,14 +140,22 @@ class DataM:
         # self.Data = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
         #                    list(map(lambda x: x.S, self.ListDataFrame0)))
 
+        # Création des Univers X et Y regroupant les caractéristiques de l'ensemble des X et Y
         A = []
         for x in self.ListDataFrame0:
             di = x.__dict__
-            di.pop('S', di)
+            di.pop('S')
             A.append(pd.DataFrame(di, index=[di['Nom']]))
         self.Univers_X = pd.concat(A, axis=0)
         self.Univers_X = self.Univers_X.drop(['Nom'], axis=1)
 
+        self.Univers_Y = self.Univers_X[self.Univers_X['Level1'] == 'Y']
+        self.Univers_X = self.Univers_X[self.Univers_X['Level1'] != 'Y']
+
+        # Création de liste de referencement de X et Y
+        self.ListY = list(filter(lambda x: x.Level1 == 'Y', self.ListDataFrame0))
+        self.ListX = list(filter(lambda x: x.Level1 != 'Y', self.ListDataFrame0))
+        self.ListDataFrame0 = []
 
         # Creation du fichier CSV avec toutes les series conservées
         if creatCSV is True:
@@ -179,7 +190,7 @@ class DataM:
             EndTraining = end_test.strftime(dt_format)
 
         # Creation de la matrice des Raw X
-        Col = [x.Nom for x in self.ListDataFrame0 if x.Level1 != "Y"]
+        Col = [x.Nom for x in self.ListX]
         self.X = self.Data.loc[self.Data.index <= EndTraining, Col]
 
         kk = np.logical_and(StartTest < self.Data.index, self.Data.index <= EndTest)
@@ -189,7 +200,7 @@ class DataM:
         self.X_BT = self.Data.loc[kk, Col]
 
         # Creation de la matrice des Raw Y
-        Col = [x.Nom for x in self.ListDataFrame0 if x.Level1 == "Y"]
+        Col = [x.Nom for x in self.ListY]
         self.Y = self.Data.loc[self.Data.index <= EndTraining, Col]
 
         kk = np.logical_and(StartTest < self.Data.index, self.Data.index <= EndTest)
@@ -497,7 +508,7 @@ class DataM:
                 Group[p['Groupe']] = []
 
             # Varaible à prevoir
-            xk = list(filter(lambda x: x.Level1 == "Y", self.ListDataFrame0))
+            xk = self.ListY
 
             if p['Inst'] is not None:
                 xk = [x for x in xk if re.search(p['Inst'], x.Nom) is not None]
