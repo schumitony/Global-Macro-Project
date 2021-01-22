@@ -5,10 +5,13 @@ import copy
 import numpy as np
 import pandas as pd
 import torch
+import time
+from sklearn.feature_selection import SelectPercentile
 
 import os
 from functools import reduce
 #import matplotlib.pyplot as plt
+from joblib import Parallel, delayed
 
 class Algo:
 
@@ -69,8 +72,14 @@ class Algo:
 
         ScoreBG.append(self.f_score(DataM.Y_Out, y_pred))
 
+        SelectPercentile(self.f_score, percentile=10).fit()
+
+
+        elapseT=[]
         for v in DataM.X_Out.columns.values.tolist():
             # OHE
+            t0 = time.perf_counter()
+
             X0 = DataM.X_Out.copy()
             X0.loc[:, v] = np.random.choice(X0.loc[:, v], X0.shape[0])
 
@@ -78,9 +87,14 @@ class Algo:
                 X0 = torch.from_numpy(X0.values).float()
                 y_pred = self.best_model.predict(X0)[:, 0]
             else:
-                y_pred = self.best_model.predict(X0)
+                # y_pred = self.best_model.predict(X0)
+                y_pred = np.zeros(len(X0))
 
             ScoreBG.append(self.f_score(DataM.Y_Out, y_pred))
+
+            elapseT.append([time.perf_counter() - t0])
+
+        ScoreBG_Parallel = Parallel(n_jobs=-1)(delayed(self.RandomX)(DataM, v, algo_name) for v in DataM.X_Out.columns.values.tolist())
 
         Normal_Scoring = np.apply_along_axis(lambda x: (x-ScoreBG[0])/np.abs(ScoreBG[0]), 0, ScoreBG[1:])
 
@@ -111,3 +125,17 @@ class Algo:
         # plt.close()
 
         return Normal_Scoring < 0
+
+
+    def RandomX(self, DataM, v, algo_name):
+
+        X0 = DataM.X_Out.copy()
+        X0.loc[:, v] = np.random.choice(X0.loc[:, v], X0.shape[0])
+
+        if algo_name == 'Neuronal':
+            X0 = torch.from_numpy(X0.values).float()
+            y_pred = self.best_model.predict(X0)[:, 0]
+        else:
+            y_pred = self.best_model.predict(X0)
+
+        return self.f_score(DataM.Y_Out, y_pred)
