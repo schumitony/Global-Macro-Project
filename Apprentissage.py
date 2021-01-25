@@ -6,11 +6,12 @@ import numpy as np
 import pandas as pd
 import torch
 import time
+from LogFiles import log
 from sklearn.feature_selection import SelectPercentile
 
 import os
 from functools import reduce
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
 
 class Algo:
@@ -60,6 +61,36 @@ class Algo:
         else:
             return (weight_f(y_pred) * y_true).sum()
 
+    def Printi(self, mypath0, algo_name, TypeLearn, y_name, DataM0, res_file):
+
+        print('Date : ' + str(DataM0.X.index[-1]))
+        print('Best ' + algo_name + TypeLearn + '_' + y_name + ': (Mean : %f) using %s' % (
+            self.algo.best_score_, self.algo.best_params_))
+        res_file.write('Best ' + algo_name + TypeLearn + '_' + y_name + ': (Mean : %f) using %s\n' % (
+            self.algo.best_score_, self.algo.best_params_))
+
+        res_file_Global = log(path=mypath0, nom=algo_name + '_' + TypeLearn + '_' + y_name, create=True)
+        res_file_Global.write('Best : (Mean : %f) using %s\n' % (self.algo.best_score_, self.algo.best_params_))
+
+        try:
+            means = self.algo.cv_results_['mean_test_score']
+            stds = self.algo.cv_results_['std_test_score']
+        except Exception as Ex:
+            means = self.algo.cv_results_['mean_test_' + self.refit]
+            stds = self.algo.cv_results_['std_test_' + self.refit]
+
+        params = self.algo.cv_results_['params']
+        for mean, stdev, param in zip(means, stds, params):
+            print("Mean : %f / Std : %f /  with: %r" % (mean, stdev, param))
+            res_file.write("Mean : %f / Std : %f /  with: %r" % (mean, stdev, param))
+
+        res_file.write('\n')
+        res_file.write('----------------------------------------------------------------------')
+
+        print(f'L apprentissage de {y_name} avec le modèle {algo_name} {TypeLearn} est terminé')
+
+
+
     def Variable_S(self, DataM, mypath, algo_name):
         ScoreBG = list()
         # Score du jeux de test
@@ -71,8 +102,6 @@ class Algo:
             y_pred = self.best_model.predict(DataM.X_Out)
 
         ScoreBG.append(self.f_score(DataM.Y_Out, y_pred))
-
-        SelectPercentile(self.f_score, percentile=10).fit()
 
 
         elapseT=[]
@@ -87,19 +116,24 @@ class Algo:
                 X0 = torch.from_numpy(X0.values).float()
                 y_pred = self.best_model.predict(X0)[:, 0]
             else:
-                # y_pred = self.best_model.predict(X0)
-                y_pred = np.zeros(len(X0))
+                y_pred = self.best_model.predict(X0)
+                # y_pred = np.zeros(len(X0))
 
             ScoreBG.append(self.f_score(DataM.Y_Out, y_pred))
 
             elapseT.append([time.perf_counter() - t0])
 
-        ScoreBG_Parallel = Parallel(n_jobs=-1)(delayed(self.RandomX)(DataM, v, algo_name) for v in DataM.X_Out.columns.values.tolist())
+        # ScoreBG_Parallel = Parallel(n_jobs=-1)(delayed(self.RandomX)(DataM, v, algo_name) for v in DataM.X_Out.columns.values.tolist())
 
         Normal_Scoring = np.apply_along_axis(lambda x: (x-ScoreBG[0])/np.abs(ScoreBG[0]), 0, ScoreBG[1:])
 
         rank = Normal_Scoring.argsort()
         Orded_variable = DataM.X_Out.columns.values[rank].tolist()
+
+        # ll1 = np.asarray(Normal_Scoring.reshape(1, Normal_Scoring.shape[0]))
+        # ll0 = self.best_model.feature_importances_.reshape(1, self.best_model.feature_importances_.shape[0])
+        #
+        # pd.DataFrame(data=np.transpose(np.concatenate((ll0, ll1), axis=0)), index=DataM.X_Out.columns).to_csv("SelectV.csv")
 
         # Creation du CSV
         pd.DataFrame(data=Normal_Scoring[rank], index=Orded_variable).to_csv(mypath + "Importance_varaibles_" + algo_name + ".csv")

@@ -245,7 +245,7 @@ class BackTest:
 
             if self.Price.name != k:
                 x = pd.merge(pred, self.Price.to_frame(), left_index=True, right_index=True, how='inner')
-                x = x.iloc[0:pred.shape[0]+1, :]
+                # x = x.iloc[0:pred.shape[0]+1, :]
 
                 self.Price = x.loc[:, self.Price.name]
                 pred = x.loc[:, pred.columns[0]]

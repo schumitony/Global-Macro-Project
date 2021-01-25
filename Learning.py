@@ -27,7 +27,7 @@ from NeuronalNetwork import Net
 import csv
 from functools import reduce
 import copy
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import re
 
 import pathlib
@@ -170,8 +170,8 @@ class Learnings:
             if m == 'XGBRegressor':
                 # XGBRegressor
                 scoring = ["neg_mean_absolute_error", "neg_mean_squared_error"]
-                # p_grid = {"learning_rate": [0.05, 0.075, 0.1], "max_depth": [5, 20, 100, 200, 400, 800], "n_estimators": [100, 200, 300, 400, 500, 600]}
-                p_grid = {"learning_rate": [0.05], "max_depth": [5], "n_estimators": [50, 100]}
+                p_grid = {"learning_rate": [0.05, 0.075, 0.1], "max_depth": [5, 20, 100, 200, 400, 800], "n_estimators": [100, 200, 300, 400, 500, 600]}
+                #p_grid = {"learning_rate": [0.05], "max_depth": [5], "n_estimators": [50, 100]}
                 model = XGBRegressor()
 
             if m == 'RandForestReg':
@@ -257,59 +257,20 @@ class Learnings:
                 with open(save_file, 'wb') as output:
                     pickle.dump(a.algo, output, pickle.HIGHEST_PROTOCOL)
 
-            # if load_mode is False:
-            #     a.algo.fit(DataM0.X, DataM0.Y)
-            #     # Sauvgarde de l'object self avec pickle
-            #     the_path = self.mypath0 + 'Pickle\\WorkInProgress\\'
-            #     if not os.path.exists(the_path):
-            #         pathlib.Path(the_path).mkdir(parents=True, exist_ok=True)
-            #
-            #     with open(the_path + 'Learn_' + y_name + '_' + algo_name + TypeLearn + '.pkl', 'wb') as output:
-            #          pickle.dump(a.algo, output, pickle.HIGHEST_PROTOCOL)
-            # else:
-            #
-            #     the_path = self.mypath0 + "Pickle\\" + 'Learn_' + y_name + '_' + algo_name + TypeLearn + '.pkl'
-            #     if os.path.isfile(the_path):
-            #         a.algo = pickle.load(open(the_path, 'rb'))
-            #     else:
-            #         a.algo.fit(DataM0.X, DataM0.Y)
-            #         # Sauvgarde de l'object self avec pickle
-            #         if not os.path.exists(self.mypath0 + 'Pickle\\'):
-            #             pathlib.Path(self.mypath0 + 'Pickle\\').mkdir(parents=True, exist_ok=True)
-            #
-            #         with open(self.mypath0 + "Pickle\\" + 'Learn_' + y_name + '_' + algo_name + TypeLearn + '.pkl',
-            #                   'wb') as output:
-            #             pickle.dump(a.algo, output, pickle.HIGHEST_PROTOCOL)
-
-            # Modèle calé
+            # Algo calibré sur le meilleur parametrage de
             a.best_model = a.algo.best_estimator_
 
             self.best_score_cv[algo_name] = a.algo.best_score_
 
             # Score du modèle sur l'echantillon hors apprentissage
             self.best_score_out[algo_name] = a.f_score(DataM0.Y_Out, a.best_model.predict(DataM0.X_Out))
+
             if a.refit == "f1_macro":
                 a.confusion_matrix = confusion_matrix(DataM0.Y_Out, a.best_model.predict(DataM0.X_Out))
 
-            print('Best ' + algo_name + TypeLearn + '_' + y_name + ': (Mean : %f) using %s' % (a.algo.best_score_, a.algo.best_params_))
-            res_file.write('Best ' + algo_name + TypeLearn + '_' + y_name + ': (Mean : %f) using %s\n' % (a.algo.best_score_, a.algo.best_params_))
+            # Ecriture dans des fichiers log
+            a.Printi(self.mypath0, algo_name, TypeLearn, y_name, DataM0, res_file)
 
-            try:
-                means = a.algo.cv_results_['mean_test_score']
-                stds = a.algo.cv_results_['std_test_score']
-            except Exception as Ex:
-                means = a.algo.cv_results_['mean_test_' + a.refit]
-                stds = a.algo.cv_results_['std_test_' + a.refit]
-
-            params = a.algo.cv_results_['params']
-            for mean, stdev, param in zip(means, stds, params):
-                print("Mean : %f / Std : %f /  with: %r" % (mean, stdev, param))
-                res_file.write("Mean : %f / Std : %f /  with: %r" % (mean, stdev, param))
-
-            res_file.write('\n')
-            res_file.write('----------------------------------------------------------------------')
-
-            print(f'L apprentissage de {y_name} avec le modèle {algo_name} {TypeLearn} est terminé')
 
         # Selection du meilleur modele entre les différents algo (sur la base du score des prediction out of sample)
         v = list(self.best_score_out.values())
@@ -317,6 +278,7 @@ class Learnings:
         vM = k[v.index(max(v))]
         self.best_model_ever = self.algo_dict[vM].best_model
         self.Selected_Col = self.algo_dict[vM].Selected_Col
+
 
     def Predict_CoutMoy2(self, y_test, Mu):
 
@@ -437,7 +399,23 @@ class Learnings:
                 learn_sel.algo_dict[algo_name].Selected_Col = pickle.load(open(load_file, 'rb'))
 
             else:
-                learn_sel.algo_dict[algo_name].Selected_Col = algo.Variable_S(self.DataM, self.mypath, algo_name)
+
+                feat_imp = algo.best_model.feature_importances_
+                learn_sel.algo_dict[algo_name].Selected_Col = self.DataM.X.columns[feat_imp>0]
+
+                feat_imp = feat_imp[feat_imp > 0]
+                feat_imp = feat_imp.reshape(1, len(feat_imp))
+
+                ImpVar = pd.DataFrame(data=feat_imp, index=[self.DataM.X.index[-1]],
+                                      columns=learn_sel.algo_dict[algo_name].Selected_Col.values)
+
+                if os.path.exists(self.mypath0 + "Importance_varaibles_" + algo_name + ".csv"):
+                    D = pd.read_csv(self.mypath0 + "Importance_varaibles_" + algo_name + ".csv", sep=",", index_col=0)
+                    ImpVar = pd.concat([D, ImpVar], axis=0)
+
+                ImpVar.to_csv(self.mypath0 + "Importance_varaibles_" + algo_name + ".csv")
+
+                # learn_sel.algo_dict[algo_name].Selected_Col = algo.Variable_S(self.DataM, self.mypath, algo_name)
 
                 # Sauvgarde de l'object self avec pickle
                 if not os.path.exists(self.save_path):

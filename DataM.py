@@ -524,7 +524,7 @@ class DataM:
                 xp = [x for x in self.ListPrix if re.search(p['Inst'], x.Nom) is not None]
 
             Group[p['Groupe']] = Group[p['Groupe']] + \
-                                 [{'Yname': x.Nom, 'h': x.h, 'PrixInst': xp[0].Nom,
+                                 [{'Yname': x.Nom, 'h': int(x.h), 'PrixInst': xp[0].Nom,
                                  'Algo': p['Algo'], 'cv': p['cv'], 'strategie': p['strategie'],
                                  'refit': p['refit'], 'max_weight': p['max_weight'], 'Centrage': p['Centrage']} for x in xk]
         return Group
