@@ -188,13 +188,23 @@ class BackTest:
         else:
             y_col = list(y_pred0.columns)
 
-        for m in self.list_model:
+        if isinstance(self.list_model, list):
+            for m in self.list_model:
+                if InModel:
+                    r = re.compile('.*' + m + '.*')
+                    y_col = y_col + list(filter(r.match, y_pred0.columns))
+                else:
+                    r = re.compile('^(?!.*' + m + ').*$')
+                    y_col = list(filter(r.match, y_col))
+        else:
             if InModel:
-                r = re.compile('.*' + m + '.*')
+                r = re.compile('.*' + self.list_model + '.*')
                 y_col = y_col + list(filter(r.match, y_pred0.columns))
             else:
-                r = re.compile('^(?!.*' + m + ').*$')
+                r = re.compile('^(?!.*' + self.list_model + ').*$')
                 y_col = list(filter(r.match, y_col))
+
+
 
         y_pred0 = y_pred0[y_col]
 

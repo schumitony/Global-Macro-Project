@@ -69,8 +69,8 @@ class Algo:
         res_file.write('Best ' + algo_name + TypeLearn + '_' + y_name + ': (Mean : %f) using %s\n' % (
             self.algo.best_score_, self.algo.best_params_))
 
-        res_file_Global = log(path=mypath0, nom=algo_name + '_' + TypeLearn + '_' + y_name, create=True)
-        res_file_Global.write('Best : (Mean : %f) using %s\n' % (self.algo.best_score_, self.algo.best_params_))
+        # res_file_Global = log(path=mypath0, nom=algo_name + '_' + TypeLearn + '_' + y_name, create=True)
+        # res_file_Global.write('Best : (Mean : %f) using %s\n' % (self.algo.best_score_, self.algo.best_params_))
 
         try:
             means = self.algo.cv_results_['mean_test_score']
@@ -84,8 +84,26 @@ class Algo:
             print("Mean : %f / Std : %f /  with: %r" % (mean, stdev, param))
             res_file.write("Mean : %f / Std : %f /  with: %r" % (mean, stdev, param))
 
+            param['Mean'] = mean
+            param['Std'] = stdev
+            BestM = pd.DataFrame(data=param, index=[DataM0.X.index[-1]])
+
+            if os.path.exists(mypath0 + "AllFit_" + algo_name + '_' + TypeLearn + '_' + y_name + ".csv"):
+                BestM.to_csv(mypath0 + "AllFit_" + algo_name + '_' + TypeLearn + '_' + y_name + ".csv", mode='a', header=False)
+            else:
+                BestM.to_csv(mypath0 + "AllFit_" + algo_name + '_' + TypeLearn + '_' + y_name + ".csv")
+
         res_file.write('\n')
         res_file.write('----------------------------------------------------------------------')
+
+        #Version CSV
+        BestM = pd.DataFrame(data=self.algo.best_params_, index=[DataM0.X.index[-1]])
+
+        if os.path.exists(mypath0 + "BestFit_" + algo_name + '_' + TypeLearn + '_' + y_name + ".csv"):
+            BestM.to_csv(mypath0 + "BestFit_" + algo_name + '_' + TypeLearn + '_' + y_name + ".csv", mode='a', header=False)
+        else:
+            BestM.to_csv(mypath0 + "BestFit_" + algo_name + '_' + TypeLearn + '_' + y_name + ".csv")
+
 
         print(f'L apprentissage de {y_name} avec le modèle {algo_name} {TypeLearn} est terminé')
 

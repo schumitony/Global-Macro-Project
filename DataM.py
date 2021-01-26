@@ -1,4 +1,5 @@
 from BackTest import BackTest
+from TrackingBestExpert import BestExpert
 from pandas import read_csv, concat, to_datetime, DataFrame
 from math import ceil, isnan
 from Serie import Serie
@@ -16,6 +17,7 @@ from dateutil.relativedelta import relativedelta
 import datetime as dt
 from LogFiles import log
 from itertools import product
+
 
 
 class DataM:
@@ -160,6 +162,8 @@ class DataM:
         # Creation du fichier CSV avec toutes les series conservées
         if creatCSV is True:
             self.Data.to_csv(os.path.abspath("").replace("Program_ML\\Code", "AllDataDerivated.csv"))
+            self.Univers_X.to_csv(os.path.abspath("").replace("Program_ML\\Code", "UniversX.csv"))
+            self.Univers_Y.to_csv(os.path.abspath("").replace("Program_ML\\Code", "UniversY.csv"))
 
         # Sauvgarde de l'object self avec pickle
         with open(os.path.abspath("").replace("Program_ML\\Code", "Data.pkl"), 'wb') as output:
@@ -540,6 +544,7 @@ class DataM:
         return DataM0
 
     def All_bt(self, nom, strategies):
+        BT_Comp = BestExpert()
         for s in strategies:
             BT = BackTest(DataM=self,
                           y=s['Yname'],
@@ -553,3 +558,5 @@ class DataM:
                           max_weight=s['max_weight'],
                           centrage=s['Centrage'])
             BT.estime_bt()
+            BT_Comp.append(BT)
+
