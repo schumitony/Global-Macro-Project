@@ -258,6 +258,28 @@ class Serie:
 
         return ListE
 
+    def ProbaDefaut(self, h0, p=None, Q1=None):
+
+        for Qs in Q1:
+
+            Q = self.CopyCar()
+
+            Q.Nom = 'ProbaDefaut_' + Q.Nom
+            Q.DerivationName = Q.DerivationName + "_ProbaDefaut"
+            Q.DerivationLevel = Q.DerivationLevel + 1
+            Q.Level4 = "ProbaDefaut"
+
+            # Fusion des deux series pour les synchroniser
+            Qk = pd.merge(Qs.S, self.S, left_index=True, right_index=True)
+
+            Proba = 1 - np.power(np.divide(1 + Qk.iloc[:, 0], 1 + Qk.iloc[:, 0] + Qk.iloc[:, 1]), 5)
+
+            Q.S = Proba.to_frame()
+            Q.S.columns = [Q.Nom]
+
+        return Q
+
+
     def Autocorrelation(self, h0, p=None, Q1=None):
         h = ceil(h0 / self.Freqence)
         Q = self.CopyCar(h0)

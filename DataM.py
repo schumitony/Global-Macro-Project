@@ -229,10 +229,10 @@ class DataM:
 
         #Dupplication des défintions selon les "ou /" imbriqué
         while len(list(filter(lambda x: x is not None,
-                              map(lambda x: re.search('\([a-zA-Z0-9/]+\)', x), List_Car), ))) > 0:
+                              map(lambda x: re.search('\([a-zA-Z0-9_/]+\)', x), List_Car), ))) > 0:
             for cond in List_Car:
                 # detection des conditions "ou" entre parentaises
-                orp = re.findall('\([a-zA-Z0-9/]+\)', cond)
+                orp = re.findall('\([a-zA-Z0-9_/]+\)', cond)
                 if len(orp) > 0:
                     List_Car.remove(cond)
                     C = orp[0]
