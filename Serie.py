@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from functools import reduce
+from scipy import optimize
 import time
 
 
@@ -280,11 +281,52 @@ class Serie:
         return Q
 
 
+    def CroissanceImp(self, h0, p, ListeS):
+        if p is not None:
+            KeyList = list(p.keys())
+
+            ListeS = list(filter(lambda x: x.Pays == self.Pays, ListeS))
+
+            Eps = list(filter(lambda x: x.Level4 == 'EPS12M', ListeS))
+
+
+        ListE = list()
+        if len(Eps) > 0:
+
+            for Sf in Eps:
+
+                Price = list(filter(lambda x: x.Level4 == 'Last' and x.Level3 == Sf.Level3, ListeS))[0]
+
+                AllSeries = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
+                                   list(map(lambda x: x.S, [Sf, Price, self])))
+
+                S = Sf.CopyCar()
+
+                S.Nom = 'CroissanceImp_' + Price.Nom
+
+                S.Level1 = Price.Level1
+                S.Level2 = Price.Level2
+                S.Level3 = Price.Level3
+                S.Level4 = 'CroissanceImp'
+
+                S.DerivationName = S.DerivationName + "_CroissanceImp"
+                S.DerivationLevel = S.DerivationLevel + 1
+
+                sol = optimize.root_scalar(f, bracket=[0, 3], method='brentq')
+
+                ListE.append(S)
+
+        return ListE
+
+
+
+
     def Autocorrelation(self, h0, p=None, Q1=None):
         h = ceil(h0 / self.Freqence)
         Q = self.CopyCar(h0)
 
         Q.Nom = 'AutoCorrel_' + str(h0) + 'd_' + Q.Nom
+        Q.Level4= "AutoCorrel"
         Q.DerivationName = Q.DerivationName + "_AutoCorrel"
         Q.DerivationLevel = Q.DerivationLevel + 1
 
