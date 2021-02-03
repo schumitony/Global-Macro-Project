@@ -282,23 +282,29 @@ class Serie:
 
 
     def CroissanceImp(self, h0, p, ListeS):
-        if p is not None:
-            KeyList = list(p.keys())
 
-            ListeS = list(filter(lambda x: x.Pays == self.Pays, ListeS))
+        ListeS = list(filter(lambda x: x.Pays == self.Pays, ListeS))
 
-            Eps = list(filter(lambda x: x.Level4 == 'EPS12M', ListeS))
+        Eps12M = list(filter(lambda x: x.Level4 == 'EPS12M', ListeS))
 
 
         ListE = list()
-        if len(Eps) > 0:
+        if len(Eps12M) > 0:
 
-            for Sf in Eps:
+            for Sf in Eps12M:
+                Sf.S.columns = ['EPS12M']
 
                 Price = list(filter(lambda x: x.Level4 == 'Last' and x.Level3 == Sf.Level3, ListeS))[0]
+                Price.S.columns = ['Price']
+
+                Eps = list(filter(lambda x: x.Level4 == 'EPS'and x.Level3 == Sf.Level3, ListeS))[0]
+                Eps.S.columns = ['EPS']
 
                 AllSeries = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
-                                   list(map(lambda x: x.S, [Sf, Price, self])))
+                                   list(map(lambda x: x.S, [Sf, Eps, Price, self])))
+
+                AllSeries = AllSeries.iloc[(AllSeries.isna().sum(axis=1) == 0).values, :]
+
 
                 S = Sf.CopyCar()
 
@@ -312,13 +318,32 @@ class Serie:
                 S.DerivationName = S.DerivationName + "_CroissanceImp"
                 S.DerivationLevel = S.DerivationLevel + 1
 
-                sol = optimize.root_scalar(f, bracket=[0, 3], method='brentq')
+                g = np.divide(AllSeries.loc[:, 'EPS'], AllSeries.loc[:, 'EPS12M']).apply(lambda x: x - 1)
+
+                x = np.zeros([AllSeries.shape[0],1])
+
+                w = Serie.SpreadAction(AllSeries, g, x)
+
+                f = lambda x: Serie.SpreadAction(AllSeries, g, x)
+                sol = optimize.root_scalar(f, bracket=[-1, 1], method='brentq')
 
                 ListE.append(S)
 
         return ListE
 
 
+    @staticmethod
+    def SpreadAction(AllSeries, g, s):
+        n = 100
+        k = g.shape[0]
+        T = np.arange(1, n+1)
+
+
+        G = np.transpose(np.tile(g, (n, 1)))
+        TT = np.tile(T.reshape([1, len(T)]), (k, 1))
+        a = np.power(1 + np.divide(G, 1+ 0.5 * TT), TT)
+
+        return T
 
 
     def Autocorrelation(self, h0, p=None, Q1=None):
