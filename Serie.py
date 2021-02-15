@@ -320,7 +320,7 @@ class Serie:
 
                 g = np.divide(AllSeries.loc[:, 'EPS'], AllSeries.loc[:, 'EPS12M']).apply(lambda x: x - 1)
 
-                x = np.zeros([AllSeries.shape[0],1])
+                x = np.zeros([AllSeries.shape[0], 1])
 
                 w = Serie.SpreadAction(AllSeries, g, x)
 
@@ -341,7 +341,7 @@ class Serie:
 
         G = np.transpose(np.tile(g, (n, 1)))
         TT = np.tile(T.reshape([1, len(T)]), (k, 1))
-        a = np.power(1 + np.divide(G, 1+ 0.5 * TT), TT)
+        a = np.power(1 + np.divide(G, 1 + 0.5 * TT), TT)
 
         return T
 
