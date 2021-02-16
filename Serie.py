@@ -338,7 +338,6 @@ class Serie:
         k = g.shape[0]
         T = np.arange(1, n+1)
 
-
         G = np.transpose(np.tile(g, (n, 1)))
         TT = np.tile(T.reshape([1, len(T)]), (k, 1))
         a = np.power(1 + np.divide(G, 1 + 0.5 * TT), TT)
@@ -447,6 +446,61 @@ class Serie:
 
         return ListE
 
+    def ExtremQuantileHit(self, h0=None, p=None, ListeS=None):
+
+        hx = [7, 15, 30, 45, 60, 75, 90]
+        Col = ['h' + str(x) for x in hx]
+
+        hx = [ceil(x / self.Freqence) for x in hx]
+
+        h = ceil(h0 / self.Freqence)
+
+        # Calcul des retrun sur plusieurs période hx
+        ret = [np.divide(self.S, self.S.shift(hi)).apply(lambda x: x - 1) for hi in hx]
+
+        # Calcul des quantiles souhaité
+        QNeg = [re.rolling(h).quantile(0.05) for re in ret]
+        QNeg = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'), QNeg)
+        QNeg.columns = Col
+
+        QPos = [re.rolling(h).quantile(0.95) for re in ret]
+        QPos = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'), QPos)
+        QPos.columns = Col
+
+        ret = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'), ret)
+        ret.columns = Col
+
+        iPos = self.CopyCar(h0)
+        iPos.Nom = 'InQuantile_XPos_' + str(h0) + 'd_' + iPos.Nom
+        iPos.DerivationName = iPos.DerivationName + "_InQuantile_XPos"
+        iPos.DerivationLevel = iPos.DerivationLevel + 1
+        iPos.Level4 = "InQuantile_XPos"
+        iPos.S = (ret >= QPos).mean(axis=1)
+
+        iNeg = self.CopyCar(h0)
+        iNeg.Nom = 'InQuantile_XNeg_' + str(h0) + 'd_' + iNeg.Nom
+        iNeg.DerivationName = iNeg.DerivationName + "_InQuantile_XNeg"
+        iNeg.DerivationLevel = iNeg.DerivationLevel + 1
+        iNeg.Level4 = "InQuantile_XNeg"
+        iNeg.S = (ret <= QNeg).mean(axis=1)
+
+        DistPos = self.CopyCar(h0)
+        DistPos.Nom = 'DistQuantile_XPos_' + str(h0) + 'd_' + DistPos.Nom
+        DistPos.DerivationName = DistPos.DerivationName + "_DistQuantile_XPos"
+        DistPos.DerivationLevel = DistPos.DerivationLevel + 1
+        DistPos.Level4 = "DistQuantile_XPos"
+        DistPos.S = (ret - QPos).mean(axis=1)
+
+        DistNeg = self.CopyCar(h0)
+        DistNeg.Nom = 'DistQuantile_XNeg_' + str(h0) + 'd_' + DistNeg.Nom
+        DistNeg.DerivationName = DistNeg.DerivationName + "_DistQuantile_XNeg"
+        DistNeg.DerivationLevel = DistNeg.DerivationLevel + 1
+        DistNeg.Level4 = "DistQuantile_XNeg"
+        DistNeg.S = (ret - QNeg).mean(axis=1)
+
+        return [iPos, iNeg, DistPos, DistNeg]
+
+
     def TempsExtrema(self, h0=None, p=None, ListeS=None):
         h = ceil(h0 / self.Freqence)
 
@@ -525,6 +579,9 @@ class Serie:
 
             PerfFromMax.append(line[1] / Max - 1)
             PerfFromMin.append(line[1] / Min - 1)
+
+        TimeFromMax = [0 if x == 0 else np.exp((1-x)/25) for x in TimeFromMax]
+        TimeFromMin = [0 if x == 0 else np.exp((1 - x) / 25) for x in TimeFromMin]
 
         Qmax.S = pd.DataFrame(TimeFromMax, index=self.S.index, columns=['TimeToMax'])
         Qmin.S = pd.DataFrame(TimeFromMin, index=self.S.index, columns=['TimeToMin'])
