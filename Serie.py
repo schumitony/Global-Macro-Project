@@ -283,27 +283,48 @@ class Serie:
 
     def CroissanceImp(self, h0, p, ListeS):
 
+        hy = ceil(365 / self.Freqence)
+
         ListeS = list(filter(lambda x: x.Pays == self.Pays, ListeS))
 
         Eps12M = list(filter(lambda x: x.Level4 == 'EPS12M', ListeS))
-
 
         ListE = list()
         if len(Eps12M) > 0:
 
             for Sf in Eps12M:
+
+                # Evaluation du processus des Earnings
                 Sf.S.columns = ['EPS12M']
+
+                # DY12M = list(filter(lambda x: x.Level4 == 'DY12M' and x.Level3 == Sf.Level3, ListeS))[0]
+                # DY12M.S.columns = ['DY12M']
+
+                DeltaE = Sf.S.shift(-hy)-Sf.S
+                DeltaE.columns = ['DeltaE']
+
+                #Eps = list(filter(lambda x: x.Level4 == 'EPS' and x.Level3 == Sf.Level3, ListeS))[0]
+                #Eps.S.columns = ['EPS']
+
+                AllSeries = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
+                                   list(map(lambda x: x.S if isinstance(x, Serie) else x, [Sf, DeltaE])))
+
+                AllSeries = AllSeries.iloc[(AllSeries.isna().sum(axis=1) == 0).values, :]
+
+
+                for line in AllSeries.itertuples():
+                    X = line['']
+
+
+
+
 
                 Price = list(filter(lambda x: x.Level4 == 'Last' and x.Level3 == Sf.Level3, ListeS))[0]
                 Price.S.columns = ['Price']
 
-                Eps = list(filter(lambda x: x.Level4 == 'EPS'and x.Level3 == Sf.Level3, ListeS))[0]
-                Eps.S.columns = ['EPS']
 
-                AllSeries = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
-                                   list(map(lambda x: x.S, [Sf, Eps, Price, self])))
-
-                AllSeries = AllSeries.iloc[(AllSeries.isna().sum(axis=1) == 0).values, :]
+                #OLS
+                Beta = (np.matmul(np.transpose(Sf.S), Sf.S))
 
 
                 S = Sf.CopyCar()
@@ -330,7 +351,6 @@ class Serie:
                 ListE.append(S)
 
         return ListE
-
 
     @staticmethod
     def SpreadAction(AllSeries, g, s):
@@ -476,6 +496,7 @@ class Serie:
         iPos.DerivationLevel = iPos.DerivationLevel + 1
         iPos.Level4 = "InQuantile_XPos"
         iPos.S = (ret >= QPos).mean(axis=1)
+        iPos.S.name = "InQuantile_XPos"
 
         iNeg = self.CopyCar(h0)
         iNeg.Nom = 'InQuantile_XNeg_' + str(h0) + 'd_' + iNeg.Nom
@@ -483,6 +504,7 @@ class Serie:
         iNeg.DerivationLevel = iNeg.DerivationLevel + 1
         iNeg.Level4 = "InQuantile_XNeg"
         iNeg.S = (ret <= QNeg).mean(axis=1)
+        iNeg.S.name = "InQuantile_XNeg"
 
         DistPos = self.CopyCar(h0)
         DistPos.Nom = 'DistQuantile_XPos_' + str(h0) + 'd_' + DistPos.Nom
@@ -490,6 +512,7 @@ class Serie:
         DistPos.DerivationLevel = DistPos.DerivationLevel + 1
         DistPos.Level4 = "DistQuantile_XPos"
         DistPos.S = (ret - QPos).mean(axis=1)
+        DistPos.S.name = "DistQuantile_XPos"
 
         DistNeg = self.CopyCar(h0)
         DistNeg.Nom = 'DistQuantile_XNeg_' + str(h0) + 'd_' + DistNeg.Nom
@@ -497,6 +520,7 @@ class Serie:
         DistNeg.DerivationLevel = DistNeg.DerivationLevel + 1
         DistNeg.Level4 = "DistQuantile_XNeg"
         DistNeg.S = (ret - QNeg).mean(axis=1)
+        DistNeg.S.name = "DistQuantile_XNeg"
 
         return [iPos, iNeg, DistPos, DistNeg]
 
@@ -580,7 +604,7 @@ class Serie:
             PerfFromMax.append(line[1] / Max - 1)
             PerfFromMin.append(line[1] / Min - 1)
 
-        TimeFromMax = [0 if x == 0 else np.exp((1-x)/25) for x in TimeFromMax]
+        TimeFromMax = [0 if x == 0 else np.exp((1 - x) / 25) for x in TimeFromMax]
         TimeFromMin = [0 if x == 0 else np.exp((1 - x) / 25) for x in TimeFromMin]
 
         Qmax.S = pd.DataFrame(TimeFromMax, index=self.S.index, columns=['TimeToMax'])
