@@ -311,13 +311,14 @@ class Serie:
 
                 AllSeries = AllSeries.iloc[(AllSeries.isna().sum(axis=1) == 0).values, :]
 
+                li = []
+                for t in range(10, 1 + len(AllSeries)):
 
-                for line in AllSeries.itertuples():
-                    X = line['']
+                    t0 = np.max([0, t-260])
+                    X = AllSeries.EPS12M[t0:t].values
+                    Y = AllSeries.DeltaE[t0:t].values
 
-
-
-
+                    li.append(Serie.OLS(X, Y))
 
                 Price = list(filter(lambda x: x.Level4 == 'Last' and x.Level3 == Sf.Level3, ListeS))[0]
                 Price.S.columns = ['Price']
@@ -351,6 +352,23 @@ class Serie:
                 ListE.append(S)
 
         return ListE
+
+    @staticmethod
+    def OLS(X, Y):
+
+        X = np.reshape(X, (len(X), 1))
+        Y = np.reshape(Y, (len(Y), 1))
+
+        X = np.concatenate([np.ones((len(X), 1)), X], axis=1)
+
+        EP = np.matmul(np.transpose(X), X)
+
+        if isinstance(EP, float):
+            r = np.matmul(np.transpose(X)/EP, Y)
+        else:
+            r = np.matmul(np.matmul(np.linalg.inv(EP), np.transpose(X)), Y)
+
+        return r
 
     @staticmethod
     def SpreadAction(AllSeries, g, s):
