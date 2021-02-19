@@ -283,7 +283,7 @@ class Serie:
 
     def CroissanceImp(self, h0, p, ListeS):
 
-        hy = ceil(365 / self.Freqence)
+        dt = ceil(365 / self.Freqence)
 
         ListeS = list(filter(lambda x: x.Pays == self.Pays, ListeS))
 
@@ -300,23 +300,30 @@ class Serie:
                 # DY12M = list(filter(lambda x: x.Level4 == 'DY12M' and x.Level3 == Sf.Level3, ListeS))[0]
                 # DY12M.S.columns = ['DY12M']
 
-                DeltaE = Sf.S.shift(-hy)-Sf.S
+                DeltaE = Sf.S.shift(-dt)-Sf.S
                 DeltaE.columns = ['DeltaE']
 
                 #Eps = list(filter(lambda x: x.Level4 == 'EPS' and x.Level3 == Sf.Level3, ListeS))[0]
                 #Eps.S.columns = ['EPS']
 
-                AllSeries = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
+                DataEPSAnalyse = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
                                    list(map(lambda x: x.S if isinstance(x, Serie) else x, [Sf, DeltaE])))
 
-                AllSeries = AllSeries.iloc[(AllSeries.isna().sum(axis=1) == 0).values, :]
+                # Décalage des série pour prendre en compte le fait que les parametre utilisé pour estimer les EPS sont connus avec un an de retard
+                DataEPSAnalyse = DataEPSAnalyse.shift(dt)
+                DataEPSAnalyse = DataEPSAnalyse.iloc[(DataEPSAnalyse.isna().sum(axis=1) == 0).values, :]
+
+                MM1Y = DataEPSAnalyse.EPS12M.rolling(window=260, min_periods=1).mean()
+                MM5Y = DataEPSAnalyse.EPS12M.rolling(window=5 * 260, min_periods=1).mean()
+
+                EPS_Cible = pd.concat([MM1Y, MM5Y, DataEPSAnalyse.EPS12M], axis=1).apply(lambda x: np.max(x), axis=1)
 
                 li = []
-                for t in range(10, 1 + len(AllSeries)):
+                for t in range(260, len(DataEPSAnalyse)):
 
-                    t0 = np.max([0, t-260])
-                    X = AllSeries.EPS12M[t0:t].values
-                    Y = AllSeries.DeltaE[t0:t].values
+                    t0 = np.max([0, t-260*5])
+                    X = EPS_Cible[t] - DataEPSAnalyse.EPS12M[t0:t].values
+                    Y = DataEPSAnalyse.DeltaE[t0:t].values
 
                     li.append(Serie.OLS(X, Y))
 
@@ -359,7 +366,7 @@ class Serie:
         X = np.reshape(X, (len(X), 1))
         Y = np.reshape(Y, (len(Y), 1))
 
-        X = np.concatenate([np.ones((len(X), 1)), X], axis=1)
+        # X = np.concatenate([np.ones((len(X), 1)), X], axis=1)
 
         EP = np.matmul(np.transpose(X), X)
 
