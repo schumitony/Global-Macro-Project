@@ -1,6 +1,6 @@
 from BackTest import BackTest
 from TrackingBestExpert import BestExpert
-from pandas import read_csv, concat, to_datetime, DataFrame
+from pandas import read_csv, to_datetime, DataFrame
 from math import ceil, isnan
 from Serie import Serie
 import numpy as np

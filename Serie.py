@@ -297,43 +297,65 @@ class Serie:
                 # Evaluation du processus des Earnings
                 Sf.S.columns = ['EPS12M']
 
-                # DY12M = list(filter(lambda x: x.Level4 == 'DY12M' and x.Level3 == Sf.Level3, ListeS))[0]
-                # DY12M.S.columns = ['DY12M']
-
                 DeltaE = Sf.S.shift(-dt)-Sf.S
                 DeltaE.columns = ['DeltaE']
 
-                #Eps = list(filter(lambda x: x.Level4 == 'EPS' and x.Level3 == Sf.Level3, ListeS))[0]
-                #Eps.S.columns = ['EPS']
+                DataEPS = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
+                                   list(map(lambda x: x.S if isinstance(x, Serie) else x, [Sf, DeltaE, self])))
 
-                DataEPSAnalyse = reduce(lambda x, y: pd.merge(x, y, left_index=True, right_index=True, how='outer'),
-                                   list(map(lambda x: x.S if isinstance(x, Serie) else x, [Sf, DeltaE])))
+                MM1Y = DataEPS.EPS12M.rolling(window=260, min_periods=1).mean()
+                MM5Y = DataEPS.EPS12M.rolling(window=5 * 260, min_periods=1).mean()
 
-                # Décalage des série pour prendre en compte le fait que les parametre utilisé pour estimer les EPS sont connus avec un an de retard
-                DataEPSAnalyse = DataEPSAnalyse.shift(dt)
-                DataEPSAnalyse = DataEPSAnalyse.iloc[(DataEPSAnalyse.isna().sum(axis=1) == 0).values, :]
+                EPS_Cible = pd.concat([MM1Y, MM5Y, DataEPS.EPS12M], axis=1).apply(lambda x: np.max(x), axis=1)
 
-                MM1Y = DataEPSAnalyse.EPS12M.rolling(window=260, min_periods=1).mean()
-                MM5Y = DataEPSAnalyse.EPS12M.rolling(window=5 * 260, min_periods=1).mean()
+                # Décalage des série pour prendre en compte le fait que les parametre utilisés pour estimer les EPS sont
+                # connus avec un an de retard
+                DataEPS_Model = DataEPS.shift(dt)
+                EPS_Cible_Model = EPS_Cible.shift(dt)
 
-                EPS_Cible = pd.concat([MM1Y, MM5Y, DataEPSAnalyse.EPS12M], axis=1).apply(lambda x: np.max(x), axis=1)
+                DataEPS_Model = DataEPS_Model.iloc[(DataEPS_Model.isna().sum(axis=1) == 0).values, :]
+                EPS_Cible_Model = EPS_Cible_Model.iloc[(EPS_Cible_Model.isna() == 0).values]
 
-                li = []
-                for t in range(260, len(DataEPSAnalyse)):
+                # Pour les donnéés ne servant pas a caler le modèle de prévisions des EPS, on supprime la variable
+                # DeltaE puis on supprime les Nan
+                DataEPS = DataEPS.drop(['DeltaE'], axis=1)
+                DataEPS = DataEPS.iloc[(DataEPS.isna().sum(axis=1) == 0).values, :]
+
+                T = np.array(range(1,301))
+                EPS_Pred = []
+                for t in range(260, len(DataEPS_Model)):
 
                     t0 = np.max([0, t-260*5])
-                    X = EPS_Cible[t] - DataEPSAnalyse.EPS12M[t0:t].values
-                    Y = DataEPSAnalyse.DeltaE[t0:t].values
+                    X = EPS_Cible_Model[t] - DataEPS_Model.EPS12M[t0:t].values
+                    Y = DataEPS_Model.DeltaE[t0:t].values
 
-                    li.append(Serie.OLS(X, Y))
+                    Theta = Serie.OLS(X, Y)
+                    EPS_t = DataEPS.EPS12M[DataEPS_Model.EPS12M.index[t]]
+                    EPS_Mu = EPS_Cible[EPS_Cible_Model.index[t]]
 
+                    Theta1 = 1-Theta
+                    EPS_Pred.append(EPS_Mu * (1 - np.power(Theta1, T)) + np.power(Theta1, T) * EPS_t)
+
+                EPS_Pred = pd.DataFrame(EPS_Pred, index=DataEPS_Model.index[260:], columns=list(map(lambda x: 'T' + str(x), list(T))))
+
+                # Recupération de la série de Prix
                 Price = list(filter(lambda x: x.Level4 == 'Last' and x.Level3 == Sf.Level3, ListeS))[0]
                 Price.S.columns = ['Price']
 
+                # Concatenation des EPS prévu, des taux et des Prix actions
+                EPS_Pred = pd.concat([Price.S, DataEPS, EPS_Pred], axis=1)
+                EPS_Pred = EPS_Pred.iloc[(EPS_Pred.isna().sum(axis=1) == 0).values, :]
 
-                #OLS
-                Beta = (np.matmul(np.transpose(Sf.S), Sf.S))
+                spread = []
+                for t in EPS_Pred.index:
+                    f = lambda x: EPS_Pred.Price[t] - Serie.EquityPrice(T,
+                                                                        EPS_Pred.loc[t,list(map(lambda x: 'T' + str(x), list(T)))],
+                                                                        EPS_Pred.loc[t, self.S.columns[0]],
+                                                                        x)
+                    spread.append(optimize.root_scalar(f, bracket=[-0.5, 0.5], method='brentq').root)
 
+                spread = pd.DataFrame(spread, index=EPS_Pred.index, columns=['EquitySpread'])
+                impCrois = np.divide(EPS_Pred.T1,EPS_Pred.EPS12M).apply(lambda x: x-1)
 
                 S = Sf.CopyCar()
 
@@ -347,47 +369,35 @@ class Serie:
                 S.DerivationName = S.DerivationName + "_CroissanceImp"
                 S.DerivationLevel = S.DerivationLevel + 1
 
-                g = np.divide(AllSeries.loc[:, 'EPS'], AllSeries.loc[:, 'EPS12M']).apply(lambda x: x - 1)
-
-                x = np.zeros([AllSeries.shape[0], 1])
-
-                w = Serie.SpreadAction(AllSeries, g, x)
-
-                f = lambda x: Serie.SpreadAction(AllSeries, g, x)
-                sol = optimize.root_scalar(f, bracket=[-1, 1], method='brentq')
-
                 ListE.append(S)
 
         return ListE
 
     @staticmethod
-    def OLS(X, Y):
+    def OLS(X, Y, Const=False):
 
-        X = np.reshape(X, (len(X), 1))
-        Y = np.reshape(Y, (len(Y), 1))
+        X = np.mat(X).T
+        Y = np.mat(Y).T
 
-        # X = np.concatenate([np.ones((len(X), 1)), X], axis=1)
+        if Const is True:
+            X = np.concatenate([np.ones((len(X), 1)), X], axis=1)
 
-        EP = np.matmul(np.transpose(X), X)
+        EP = np.matmul(X.T, X)
+        r = np.linalg.inv(EP) * X.T * Y
+        # r = np.matmul(np.matmul(np.linalg.inv(EP), np.transpose(X)), Y)
 
-        if isinstance(EP, float):
-            r = np.matmul(np.transpose(X)/EP, Y)
-        else:
-            r = np.matmul(np.matmul(np.linalg.inv(EP), np.transpose(X)), Y)
+        if r.shape[0] == 1 and r.shape[1] == 1:
+            r = r[0, 0]
 
         return r
 
     @staticmethod
-    def SpreadAction(AllSeries, g, s):
-        n = 100
-        k = g.shape[0]
-        T = np.arange(1, n+1)
+    def EquityPrice(T, EPS, rate, spread):
 
-        G = np.transpose(np.tile(g, (n, 1)))
-        TT = np.tile(T.reshape([1, len(T)]), (k, 1))
-        a = np.power(1 + np.divide(G, 1 + 0.5 * TT), TT)
+        DF = np.mat(np.power((1 + rate + spread), -T))
+        Price = np.mat(EPS) * DF.T
 
-        return T
+        return Price[0, 0]
 
 
     def Autocorrelation(self, h0, p=None, Q1=None):
