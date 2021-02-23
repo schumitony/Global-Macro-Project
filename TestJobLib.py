@@ -9,23 +9,24 @@ class Toto:
     def __init__(self):
         n_vectors = 100000
         t0 = time.perf_counter()
-        random_vector = [Toto.stochastic_function(1000) for _ in range(n_vectors)]
+        random_vector = [Toto.stochastic_function(1000, k) for k in range(1, n_vectors)]
         print(str(time.perf_counter() - t0))
         # print('\nThe different generated vectors in a sequential manner are:\n {}'.format(np.array(random_vector)))
 
-        backend = 'loky'
+        # backend = 'loky'
         t0 = time.perf_counter()
-        random_vector = Parallel(n_jobs=-1, backend=backend)(delayed(Toto.stochastic_function)(1000) for i in range(n_vectors))
+        random_vector_P = Parallel(n_jobs=-1)(delayed(Toto.stochastic_function)(1000, k) for k in range(1, n_vectors))
         print(str(time.perf_counter() - t0))
+        a = 1
         # Toto.print_vector(random_vector, backend)
 
     @staticmethod
-    def stochastic_function(n):
+    def stochastic_function(n, k):
         """Randomly generate integer up to a maximum value."""
-        k = np.random.randint(10, size=n)
-        li = 1
+        # x = np.random.randint(10, size=n)
+        li = []
         for i in range(0, n):
-            li = li * k
+            li.append(i*k)
 
         return li
 

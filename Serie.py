@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from functools import reduce
 from scipy import optimize
 import time
+from joblib import Parallel, delayed
 
 
 class Serie:
@@ -281,7 +282,7 @@ class Serie:
         return Q
 
 
-    def CroissanceImp(self, h0, p, ListeS):
+    def SpreadEquity(self, h0, p, ListeS):
 
         dt = ceil(365 / self.Freqence)
 
@@ -321,7 +322,7 @@ class Serie:
                 DataEPS = DataEPS.drop(['DeltaE'], axis=1)
                 DataEPS = DataEPS.iloc[(DataEPS.isna().sum(axis=1) == 0).values, :]
 
-                T = np.array(range(1,301))
+                T = np.array(range(1, 301))
                 EPS_Pred = []
                 for t in range(260, len(DataEPS_Model)):
 
@@ -346,32 +347,59 @@ class Serie:
                 EPS_Pred = pd.concat([Price.S, DataEPS, EPS_Pred], axis=1)
                 EPS_Pred = EPS_Pred.iloc[(EPS_Pred.isna().sum(axis=1) == 0).values, :]
 
-                spread = []
-                for t in EPS_Pred.index:
-                    f = lambda x: EPS_Pred.Price[t] - Serie.EquityPrice(T,
-                                                                        EPS_Pred.loc[t,list(map(lambda x: 'T' + str(x), list(T)))],
-                                                                        EPS_Pred.loc[t, self.S.columns[0]],
-                                                                        x)
-                    spread.append(optimize.root_scalar(f, bracket=[-0.5, 0.5], method='brentq').root)
+                # t0 = time.perf_counter()
+                # spread = []
+                # for t in EPS_Pred.index:
+                #     spread.append(self.RootCalculus(T, EPS_Pred, t))
+                #
+                # print(str(time.perf_counter() - t0))
 
-                spread = pd.DataFrame(spread, index=EPS_Pred.index, columns=['EquitySpread'])
-                impCrois = np.divide(EPS_Pred.T1,EPS_Pred.EPS12M).apply(lambda x: x-1)
+                t0 = time.perf_counter()
+                g = lambda x: self.RootCalculus(T, EPS_Pred, x)
+                spread = Parallel(n_jobs=-1)(delayed(g)(t) for t in EPS_Pred.index)
+                print(str(time.perf_counter() - t0))
+
+                # impCrois = np.divide(EPS_Pred.T1, EPS_Pred.EPS12M).apply(lambda x: x-1)
 
                 S = Sf.CopyCar()
 
-                S.Nom = 'CroissanceImp_' + Price.Nom
+                S.Nom = 'SpreadEquity_' + Price.Nom
 
                 S.Level1 = Price.Level1
                 S.Level2 = Price.Level2
                 S.Level3 = Price.Level3
-                S.Level4 = 'CroissanceImp'
+                S.Level4 = 'SpreadEquity'
 
-                S.DerivationName = S.DerivationName + "_CroissanceImp"
+                S.DerivationName = S.DerivationName + "_SpreadEquity"
                 S.DerivationLevel = S.DerivationLevel + 1
+
+                S.S = pd.DataFrame(spread, index=EPS_Pred.index, columns=['EquitySpread'])
 
                 ListE.append(S)
 
         return ListE
+
+    @staticmethod
+    def ParallelOLS(EPS_Cible_Model, DataEPS_Model, EPS_Cible, DataEPS, T, t):
+        t0 = np.max([0, t - 260 * 5])
+        X = EPS_Cible_Model[t] - DataEPS_Model.EPS12M[t0:t].values
+        Y = DataEPS_Model.DeltaE[t0:t].values
+
+        Theta = Serie.OLS(X, Y)
+        EPS_t = DataEPS.EPS12M[DataEPS_Model.EPS12M.index[t]]
+        EPS_Mu = EPS_Cible[EPS_Cible_Model.index[t]]
+
+        Theta1 = 1 - Theta
+        return EPS_Mu * (1 - np.power(Theta1, T)) + np.power(Theta1, T) * EPS_t
+
+    def RootCalculus(self, T, EPS_Pred, t):
+
+        f = lambda x: EPS_Pred.Price[t] - Serie.EquityPrice(T,
+                                                            EPS_Pred.loc[t, list(map(lambda x: 'T' + str(x), list(T)))],
+                                                            EPS_Pred.loc[t, self.S.columns[0]],
+                                                            x)
+        return optimize.root_scalar(f, bracket=[-0.5, 0.5], method='brentq').root
+
 
     @staticmethod
     def OLS(X, Y, Const=False):
